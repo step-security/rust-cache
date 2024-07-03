@@ -8,7 +8,6 @@
     "rust",
     "cache"
   ],
-  "author": "Arpad Borsos <arpad.borsos@googlemail.com>",
   "license": "LGPL-3.0",
   "repository": {
     "type": "git",

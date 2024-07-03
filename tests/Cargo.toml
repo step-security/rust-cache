@@ -2,7 +2,7 @@
 publish = false
 name = "rust-cache"
 version = "0.1.0"
-authors = ["Arpad Borsos <arpad.borsos@googlemail.com>"]
+authors = ["StepSecurity <security@stepsecurity.io>"]
 edition = "2021"
 
 [dependencies]
