@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+
+  - package-ecosystem: cargo
+    directory: /tests
+    schedule:
+      interval: daily
+
+  - package-ecosystem: cargo
+    directory: /tests/wasm-workspace
+    schedule:
+      interval: daily

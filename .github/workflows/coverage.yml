@@ -16,11 +16,16 @@ jobs:
       CARGO_TERM_COLOR: always
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden Runner
+        uses: step-security/harden-runner@17d0e2bd7d51742c71671bd19fa12bdc9d40a3d6 # v2.8.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - run: rustup toolchain install stable --profile minimal --component llvm-tools-preview --no-self-update
 
-      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@ef59e9fa397c19f99f2dda1d9857c0c704c41966 # cargo-llvm-cov
 
       - uses: ./
         with:
