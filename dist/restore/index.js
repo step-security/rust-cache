@@ -61143,6 +61143,132 @@ module.exports = buildConnector
 
 /***/ }),
 
+/***/ 4462:
+/***/ ((module) => {
+
+"use strict";
+
+
+/** @type {Record<string, string | undefined>} */
+const headerNameLowerCasedRecord = {}
+
+// https://developer.mozilla.org/docs/Web/HTTP/Headers
+const wellknownHeaderNames = [
+  'Accept',
+  'Accept-Encoding',
+  'Accept-Language',
+  'Accept-Ranges',
+  'Access-Control-Allow-Credentials',
+  'Access-Control-Allow-Headers',
+  'Access-Control-Allow-Methods',
+  'Access-Control-Allow-Origin',
+  'Access-Control-Expose-Headers',
+  'Access-Control-Max-Age',
+  'Access-Control-Request-Headers',
+  'Access-Control-Request-Method',
+  'Age',
+  'Allow',
+  'Alt-Svc',
+  'Alt-Used',
+  'Authorization',
+  'Cache-Control',
+  'Clear-Site-Data',
+  'Connection',
+  'Content-Disposition',
+  'Content-Encoding',
+  'Content-Language',
+  'Content-Length',
+  'Content-Location',
+  'Content-Range',
+  'Content-Security-Policy',
+  'Content-Security-Policy-Report-Only',
+  'Content-Type',
+  'Cookie',
+  'Cross-Origin-Embedder-Policy',
+  'Cross-Origin-Opener-Policy',
+  'Cross-Origin-Resource-Policy',
+  'Date',
+  'Device-Memory',
+  'Downlink',
+  'ECT',
+  'ETag',
+  'Expect',
+  'Expect-CT',
+  'Expires',
+  'Forwarded',
+  'From',
+  'Host',
+  'If-Match',
+  'If-Modified-Since',
+  'If-None-Match',
+  'If-Range',
+  'If-Unmodified-Since',
+  'Keep-Alive',
+  'Last-Modified',
+  'Link',
+  'Location',
+  'Max-Forwards',
+  'Origin',
+  'Permissions-Policy',
+  'Pragma',
+  'Proxy-Authenticate',
+  'Proxy-Authorization',
+  'RTT',
+  'Range',
+  'Referer',
+  'Referrer-Policy',
+  'Refresh',
+  'Retry-After',
+  'Sec-WebSocket-Accept',
+  'Sec-WebSocket-Extensions',
+  'Sec-WebSocket-Key',
+  'Sec-WebSocket-Protocol',
+  'Sec-WebSocket-Version',
+  'Server',
+  'Server-Timing',
+  'Service-Worker-Allowed',
+  'Service-Worker-Navigation-Preload',
+  'Set-Cookie',
+  'SourceMap',
+  'Strict-Transport-Security',
+  'Supports-Loading-Mode',
+  'TE',
+  'Timing-Allow-Origin',
+  'Trailer',
+  'Transfer-Encoding',
+  'Upgrade',
+  'Upgrade-Insecure-Requests',
+  'User-Agent',
+  'Vary',
+  'Via',
+  'WWW-Authenticate',
+  'X-Content-Type-Options',
+  'X-DNS-Prefetch-Control',
+  'X-Frame-Options',
+  'X-Permitted-Cross-Domain-Policies',
+  'X-Powered-By',
+  'X-Requested-With',
+  'X-XSS-Protection'
+]
+
+for (let i = 0; i < wellknownHeaderNames.length; ++i) {
+  const key = wellknownHeaderNames[i]
+  const lowerCasedKey = key.toLowerCase()
+  headerNameLowerCasedRecord[key] = headerNameLowerCasedRecord[lowerCasedKey] =
+    lowerCasedKey
+}
+
+// Note: object prototypes should not be able to be referenced. e.g. `Object#hasOwnProperty`.
+Object.setPrototypeOf(headerNameLowerCasedRecord, null)
+
+module.exports = {
+  wellknownHeaderNames,
+  headerNameLowerCasedRecord
+}
+
+
+/***/ }),
+
 /***/ 8045:
 /***/ ((module) => {
 
@@ -61973,6 +62099,7 @@ const { InvalidArgumentError } = __nccwpck_require__(8045)
 const { Blob } = __nccwpck_require__(4300)
 const nodeUtil = __nccwpck_require__(3837)
 const { stringify } = __nccwpck_require__(3477)
+const { headerNameLowerCasedRecord } = __nccwpck_require__(4462)
 
 const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(v => Number(v))
 
@@ -62180,6 +62307,15 @@ const KEEPALIVE_TIMEOUT_EXPR = /timeout=(\d+)/
 function parseKeepAliveTimeout (val) {
   const m = val.toString().match(KEEPALIVE_TIMEOUT_EXPR)
   return m ? parseInt(m[1], 10) * 1000 : null
+}
+
+/**
+ * Retrieves a header name and returns its lowercase value.
+ * @param {string | Buffer} value Header name
+ * @returns {string}
+ */
+function headerNameToString (value) {
+  return headerNameLowerCasedRecord[value] || value.toLowerCase()
 }
 
 function parseHeaders (headers, obj = {}) {
@@ -62453,6 +62589,7 @@ module.exports = {
   isIterable,
   isAsyncIterable,
   isDestroyed,
+  headerNameToString,
   parseRawHeaders,
   parseHeaders,
   parseKeepAliveTimeout,
@@ -69100,14 +69237,18 @@ const { isBlobLike, toUSVString, ReadableStreamFrom } = __nccwpck_require__(3983
 const assert = __nccwpck_require__(9491)
 const { isUint8Array } = __nccwpck_require__(9830)
 
+let supportedHashes = []
+
 // https://nodejs.org/api/crypto.html#determining-if-crypto-support-is-unavailable
 /** @type {import('crypto')|undefined} */
 let crypto
 
 try {
   crypto = __nccwpck_require__(6113)
+  const possibleRelevantHashes = ['sha256', 'sha384', 'sha512']
+  supportedHashes = crypto.getHashes().filter((hash) => possibleRelevantHashes.includes(hash))
+/* c8 ignore next 3 */
 } catch {
-
 }
 
 function responseURL (response) {
@@ -69635,66 +69776,56 @@ function bytesMatch (bytes, metadataList) {
     return true
   }
 
-  // 3. If parsedMetadata is the empty set, return true.
+  // 3. If response is not eligible for integrity validation, return false.
+  // TODO
+
+  // 4. If parsedMetadata is the empty set, return true.
   if (parsedMetadata.length === 0) {
     return true
   }
 
-  // 4. Let metadata be the result of getting the strongest
+  // 5. Let metadata be the result of getting the strongest
   //    metadata from parsedMetadata.
-  const list = parsedMetadata.sort((c, d) => d.algo.localeCompare(c.algo))
-  // get the strongest algorithm
-  const strongest = list[0].algo
-  // get all entries that use the strongest algorithm; ignore weaker
-  const metadata = list.filter((item) => item.algo === strongest)
+  const strongest = getStrongestMetadata(parsedMetadata)
+  const metadata = filterMetadataListByAlgorithm(parsedMetadata, strongest)
 
-  // 5. For each item in metadata:
+  // 6. For each item in metadata:
   for (const item of metadata) {
     // 1. Let algorithm be the alg component of item.
     const algorithm = item.algo
 
     // 2. Let expectedValue be the val component of item.
-    let expectedValue = item.hash
+    const expectedValue = item.hash
 
     // See https://github.com/web-platform-tests/wpt/commit/e4c5cc7a5e48093220528dfdd1c4012dc3837a0e
     // "be liberal with padding". This is annoying, and it's not even in the spec.
 
-    if (expectedValue.endsWith('==')) {
-      expectedValue = expectedValue.slice(0, -2)
-    }
-
     // 3. Let actualValue be the result of applying algorithm to bytes.
     let actualValue = crypto.createHash(algorithm).update(bytes).digest('base64')
 
-    if (actualValue.endsWith('==')) {
-      actualValue = actualValue.slice(0, -2)
+    if (actualValue[actualValue.length - 1] === '=') {
+      if (actualValue[actualValue.length - 2] === '=') {
+        actualValue = actualValue.slice(0, -2)
+      } else {
+        actualValue = actualValue.slice(0, -1)
+      }
     }
 
     // 4. If actualValue is a case-sensitive match for expectedValue,
     //    return true.
-    if (actualValue === expectedValue) {
-      return true
-    }
-
-    let actualBase64URL = crypto.createHash(algorithm).update(bytes).digest('base64url')
-
-    if (actualBase64URL.endsWith('==')) {
-      actualBase64URL = actualBase64URL.slice(0, -2)
-    }
-
-    if (actualBase64URL === expectedValue) {
+    if (compareBase64Mixed(actualValue, expectedValue)) {
       return true
     }
   }
 
-  // 6. Return false.
+  // 7. Return false.
   return false
 }
 
 // https://w3c.github.io/webappsec-subresource-integrity/#grammardef-hash-with-options
 // https://www.w3.org/TR/CSP2/#source-list-syntax
 // https://www.rfc-editor.org/rfc/rfc5234#appendix-B.1
-const parseHashWithOptions = /((?<algo>sha256|sha384|sha512)-(?<hash>[A-z0-9+/]{1}.*={0,2}))( +[\x21-\x7e]?)?/i
+const parseHashWithOptions = /(?<algo>sha256|sha384|sha512)-((?<hash>[A-Za-z0-9+/]+|[A-Za-z0-9_-]+)={0,2}(?:\s|$)( +[!-~]*)?)?/i
 
 /**
  * @see https://w3c.github.io/webappsec-subresource-integrity/#parse-metadata
@@ -69708,8 +69839,6 @@ function parseMetadata (metadata) {
   // 2. Let empty be equal to true.
   let empty = true
 
-  const supportedHashes = crypto.getHashes()
-
   // 3. For each token returned by splitting metadata on spaces:
   for (const token of metadata.split(' ')) {
     // 1. Set empty to false.
@@ -69719,7 +69848,11 @@ function parseMetadata (metadata) {
     const parsedToken = parseHashWithOptions.exec(token)
 
     // 3. If token does not parse, continue to the next token.
-    if (parsedToken === null || parsedToken.groups === undefined) {
+    if (
+      parsedToken === null ||
+      parsedToken.groups === undefined ||
+      parsedToken.groups.algo === undefined
+    ) {
       // Note: Chromium blocks the request at this point, but Firefox
       // gives a warning that an invalid integrity was given. The
       // correct behavior is to ignore these, and subsequently not
@@ -69728,11 +69861,11 @@ function parseMetadata (metadata) {
     }
 
     // 4. Let algorithm be the hash-algo component of token.
-    const algorithm = parsedToken.groups.algo
+    const algorithm = parsedToken.groups.algo.toLowerCase()
 
     // 5. If algorithm is a hash function recognized by the user
     //    agent, add the parsed token to result.
-    if (supportedHashes.includes(algorithm.toLowerCase())) {
+    if (supportedHashes.includes(algorithm)) {
       result.push(parsedToken.groups)
     }
   }
@@ -69743,6 +69876,82 @@ function parseMetadata (metadata) {
   }
 
   return result
+}
+
+/**
+ * @param {{ algo: 'sha256' | 'sha384' | 'sha512' }[]} metadataList
+ */
+function getStrongestMetadata (metadataList) {
+  // Let algorithm be the algo component of the first item in metadataList.
+  // Can be sha256
+  let algorithm = metadataList[0].algo
+  // If the algorithm is sha512, then it is the strongest
+  // and we can return immediately
+  if (algorithm[3] === '5') {
+    return algorithm
+  }
+
+  for (let i = 1; i < metadataList.length; ++i) {
+    const metadata = metadataList[i]
+    // If the algorithm is sha512, then it is the strongest
+    // and we can break the loop immediately
+    if (metadata.algo[3] === '5') {
+      algorithm = 'sha512'
+      break
+    // If the algorithm is sha384, then a potential sha256 or sha384 is ignored
+    } else if (algorithm[3] === '3') {
+      continue
+    // algorithm is sha256, check if algorithm is sha384 and if so, set it as
+    // the strongest
+    } else if (metadata.algo[3] === '3') {
+      algorithm = 'sha384'
+    }
+  }
+  return algorithm
+}
+
+function filterMetadataListByAlgorithm (metadataList, algorithm) {
+  if (metadataList.length === 1) {
+    return metadataList
+  }
+
+  let pos = 0
+  for (let i = 0; i < metadataList.length; ++i) {
+    if (metadataList[i].algo === algorithm) {
+      metadataList[pos++] = metadataList[i]
+    }
+  }
+
+  metadataList.length = pos
+
+  return metadataList
+}
+
+/**
+ * Compares two base64 strings, allowing for base64url
+ * in the second string.
+ *
+* @param {string} actualValue always base64
+ * @param {string} expectedValue base64 or base64url
+ * @returns {boolean}
+ */
+function compareBase64Mixed (actualValue, expectedValue) {
+  if (actualValue.length !== expectedValue.length) {
+    return false
+  }
+  for (let i = 0; i < actualValue.length; ++i) {
+    if (actualValue[i] !== expectedValue[i]) {
+      if (
+        (actualValue[i] === '+' && expectedValue[i] === '-') ||
+        (actualValue[i] === '/' && expectedValue[i] === '_')
+      ) {
+        continue
+      }
+      return false
+    }
+  }
+
+  return true
 }
 
 // https://w3c.github.io/webappsec-upgrade-insecure-requests/#upgrade-request
@@ -70160,7 +70369,8 @@ module.exports = {
   urlHasHttpsScheme,
   urlIsHttpHttpsScheme,
   readAllBytes,
-  normalizeMethodRecord
+  normalizeMethodRecord,
+  parseMetadata
 }
 
 
@@ -72247,12 +72457,17 @@ function parseLocation (statusCode, headers) {
 
 // https://tools.ietf.org/html/rfc7231#section-6.4.4
 function shouldRemoveHeader (header, removeContent, unknownOrigin) {
-  return (
-    (header.length === 4 && header.toString().toLowerCase() === 'host') ||
-    (removeContent && header.toString().toLowerCase().indexOf('content-') === 0) ||
-    (unknownOrigin && header.length === 13 && header.toString().toLowerCase() === 'authorization') ||
-    (unknownOrigin && header.length === 6 && header.toString().toLowerCase() === 'cookie')
-  )
+  if (header.length === 4) {
+    return util.headerNameToString(header) === 'host'
+  }
+  if (removeContent && util.headerNameToString(header).startsWith('content-')) {
+    return true
+  }
+  if (unknownOrigin && (header.length === 13 || header.length === 6 || header.length === 19)) {
+    const name = util.headerNameToString(header)
+    return name === 'authorization' || name === 'cookie' || name === 'proxy-authorization'
+  }
+  return false
 }
 
 // https://tools.ietf.org/html/rfc7231#section-6.4
@@ -90846,6 +91061,36 @@ const isAsyncFn = kindOfTest('AsyncFunction');
 const isThenable = (thing) =>
   thing && (isObject(thing) || isFunction(thing)) && isFunction(thing.then) && isFunction(thing.catch);
 
+// original code
+// https://github.com/DigitalBrainJS/AxiosPromise/blob/16deab13710ec09779922131f3fa5954320f83ab/lib/utils.js#L11-L34
+
+const _setImmediate = ((setImmediateSupported, postMessageSupported) => {
+  if (setImmediateSupported) {
+    return setImmediate;
+  }
+
+  return postMessageSupported ? ((token, callbacks) => {
+    _global.addEventListener("message", ({source, data}) => {
+      if (source === _global && data === token) {
+        callbacks.length && callbacks.shift()();
+      }
+    }, false);
+
+    return (cb) => {
+      callbacks.push(cb);
+      _global.postMessage(token, "*");
+    }
+  })(`axios@${Math.random()}`, []) : (cb) => setTimeout(cb);
+})(
+  typeof setImmediate === 'function',
+  isFunction(_global.postMessage)
+);
+
+const asap = typeof queueMicrotask !== 'undefined' ?
+  queueMicrotask.bind(_global) : ( typeof process !== 'undefined' && process.nextTick || _setImmediate);
+
+// *********************
+
 /* harmony default export */ const utils = ({
   isArray,
   isArrayBuffer,
@@ -90901,7 +91146,9 @@ const isThenable = (thing) =>
   isSpecCompliantForm,
   toJSONObject,
   isAsyncFn,
-  isThenable
+  isThenable,
+  setImmediate: _setImmediate,
+  asap
 });
 
 ;// CONCATENATED MODULE: ./node_modules/axios/lib/core/AxiosError.js
@@ -92323,7 +92570,7 @@ var follow_redirects = __nccwpck_require__(7707);
 // EXTERNAL MODULE: external "zlib"
 var external_zlib_ = __nccwpck_require__(9796);
 ;// CONCATENATED MODULE: ./node_modules/axios/lib/env/data.js
-const VERSION = "1.7.2";
+const VERSION = "1.7.4";
 ;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/parseProtocol.js
 
 
@@ -92389,103 +92636,7 @@ function fromDataURI(uri, asBlob, options) {
 
 // EXTERNAL MODULE: external "stream"
 var external_stream_ = __nccwpck_require__(2781);
-;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/throttle.js
-
-
-/**
- * Throttle decorator
- * @param {Function} fn
- * @param {Number} freq
- * @return {Function}
- */
-function throttle(fn, freq) {
-  let timestamp = 0;
-  const threshold = 1000 / freq;
-  let timer = null;
-  return function throttled() {
-    const force = this === true;
-
-    const now = Date.now();
-    if (force || now - timestamp > threshold) {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      timestamp = now;
-      return fn.apply(null, arguments);
-    }
-    if (!timer) {
-      timer = setTimeout(() => {
-        timer = null;
-        timestamp = Date.now();
-        return fn.apply(null, arguments);
-      }, threshold - (now - timestamp));
-    }
-  };
-}
-
-/* harmony default export */ const helpers_throttle = (throttle);
-
-;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/speedometer.js
-
-
-/**
- * Calculate data maxRate
- * @param {Number} [samplesCount= 10]
- * @param {Number} [min= 1000]
- * @returns {Function}
- */
-function speedometer(samplesCount, min) {
-  samplesCount = samplesCount || 10;
-  const bytes = new Array(samplesCount);
-  const timestamps = new Array(samplesCount);
-  let head = 0;
-  let tail = 0;
-  let firstSampleTS;
-
-  min = min !== undefined ? min : 1000;
-
-  return function push(chunkLength) {
-    const now = Date.now();
-
-    const startedAt = timestamps[tail];
-
-    if (!firstSampleTS) {
-      firstSampleTS = now;
-    }
-
-    bytes[head] = chunkLength;
-    timestamps[head] = now;
-
-    let i = tail;
-    let bytesCount = 0;
-
-    while (i !== head) {
-      bytesCount += bytes[i++];
-      i = i % samplesCount;
-    }
-
-    head = (head + 1) % samplesCount;
-
-    if (head === tail) {
-      tail = (tail + 1) % samplesCount;
-    }
-
-    if (now - firstSampleTS < min) {
-      return;
-    }
-
-    const passed = startedAt && now - startedAt;
-
-    return passed ? Math.round(bytesCount * 1000 / passed) : undefined;
-  };
-}
-
-/* harmony default export */ const helpers_speedometer = (speedometer);
-
 ;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/AxiosTransformStream.js
-
-
 
 
 
@@ -92510,12 +92661,8 @@ class AxiosTransformStream extends external_stream_.Transform{
       readableHighWaterMark: options.chunkSize
     });
 
-    const self = this;
-
     const internals = this[kInternals] = {
-      length: options.length,
       timeWindow: options.timeWindow,
-      ticksRate: options.ticksRate,
       chunkSize: options.chunkSize,
       maxRate: options.maxRate,
       minChunkSize: options.minChunkSize,
@@ -92527,8 +92674,6 @@ class AxiosTransformStream extends external_stream_.Transform{
       onReadCallback: null
     };
 
-    const _speedometer = helpers_speedometer(internals.ticksRate * options.samplesCount, internals.timeWindow);
-
     this.on('newListener', event => {
       if (event === 'progress') {
         if (!internals.isCaptured) {
@@ -92536,39 +92681,6 @@ class AxiosTransformStream extends external_stream_.Transform{
         }
       }
     });
-
-    let bytesNotified = 0;
-
-    internals.updateProgress = helpers_throttle(function throttledHandler() {
-      const totalBytes = internals.length;
-      const bytesTransferred = internals.bytesSeen;
-      const progressBytes = bytesTransferred - bytesNotified;
-      if (!progressBytes || self.destroyed) return;
-
-      const rate = _speedometer(progressBytes);
-
-      bytesNotified = bytesTransferred;
-
-      process.nextTick(() => {
-        self.emit('progress', {
-          loaded: bytesTransferred,
-          total: totalBytes,
-          progress: totalBytes ? (bytesTransferred / totalBytes) : undefined,
-          bytes: progressBytes,
-          rate: rate ? rate : undefined,
-          estimated: rate && totalBytes && bytesTransferred <= totalBytes ?
-            (totalBytes - bytesTransferred) / rate : undefined,
-          lengthComputable: totalBytes != null
-        });
-      });
-    }, internals.ticksRate);
-
-    const onFinish = () => {
-      internals.updateProgress.call(true);
-    };
-
-    this.once('end', onFinish);
-    this.once('error', onFinish);
   }
 
   _read(size) {
@@ -92582,7 +92694,6 @@ class AxiosTransformStream extends external_stream_.Transform{
   }
 
   _transform(chunk, encoding, callback) {
-    const self = this;
     const internals = this[kInternals];
     const maxRate = internals.maxRate;
 
@@ -92594,16 +92705,14 @@ class AxiosTransformStream extends external_stream_.Transform{
     const bytesThreshold = (maxRate / divider);
     const minChunkSize = internals.minChunkSize !== false ? Math.max(internals.minChunkSize, bytesThreshold * 0.01) : 0;
 
-    function pushChunk(_chunk, _callback) {
+    const pushChunk = (_chunk, _callback) => {
       const bytes = Buffer.byteLength(_chunk);
       internals.bytesSeen += bytes;
       internals.bytes += bytes;
 
-      if (internals.isCaptured) {
-        internals.updateProgress();
-      }
+      internals.isCaptured && this.emit('progress', internals.bytesSeen);
 
-      if (self.push(_chunk)) {
+      if (this.push(_chunk)) {
         process.nextTick(_callback);
       } else {
         internals.onReadCallback = () => {
@@ -92667,11 +92776,6 @@ class AxiosTransformStream extends external_stream_.Transform{
         callback(null);
       }
     });
-  }
-
-  setLength(length) {
-    this[kInternals].length = +length;
-    return this;
   }
 }
 
@@ -92857,7 +92961,157 @@ const callbackify = (fn, reducer) => {
 
 /* harmony default export */ const helpers_callbackify = (callbackify);
 
+;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/speedometer.js
+
+
+/**
+ * Calculate data maxRate
+ * @param {Number} [samplesCount= 10]
+ * @param {Number} [min= 1000]
+ * @returns {Function}
+ */
+function speedometer(samplesCount, min) {
+  samplesCount = samplesCount || 10;
+  const bytes = new Array(samplesCount);
+  const timestamps = new Array(samplesCount);
+  let head = 0;
+  let tail = 0;
+  let firstSampleTS;
+
+  min = min !== undefined ? min : 1000;
+
+  return function push(chunkLength) {
+    const now = Date.now();
+
+    const startedAt = timestamps[tail];
+
+    if (!firstSampleTS) {
+      firstSampleTS = now;
+    }
+
+    bytes[head] = chunkLength;
+    timestamps[head] = now;
+
+    let i = tail;
+    let bytesCount = 0;
+
+    while (i !== head) {
+      bytesCount += bytes[i++];
+      i = i % samplesCount;
+    }
+
+    head = (head + 1) % samplesCount;
+
+    if (head === tail) {
+      tail = (tail + 1) % samplesCount;
+    }
+
+    if (now - firstSampleTS < min) {
+      return;
+    }
+
+    const passed = startedAt && now - startedAt;
+
+    return passed ? Math.round(bytesCount * 1000 / passed) : undefined;
+  };
+}
+
+/* harmony default export */ const helpers_speedometer = (speedometer);
+
+;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/throttle.js
+/**
+ * Throttle decorator
+ * @param {Function} fn
+ * @param {Number} freq
+ * @return {Function}
+ */
+function throttle(fn, freq) {
+  let timestamp = 0;
+  let threshold = 1000 / freq;
+  let lastArgs;
+  let timer;
+
+  const invoke = (args, now = Date.now()) => {
+    timestamp = now;
+    lastArgs = null;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    fn.apply(null, args);
+  }
+
+  const throttled = (...args) => {
+    const now = Date.now();
+    const passed = now - timestamp;
+    if ( passed >= threshold) {
+      invoke(args, now);
+    } else {
+      lastArgs = args;
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = null;
+          invoke(lastArgs)
+        }, threshold - passed);
+      }
+    }
+  }
+
+  const flush = () => lastArgs && invoke(lastArgs);
+
+  return [throttled, flush];
+}
+
+/* harmony default export */ const helpers_throttle = (throttle);
+
+;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/progressEventReducer.js
+
+
+
+
+const progressEventReducer = (listener, isDownloadStream, freq = 3) => {
+  let bytesNotified = 0;
+  const _speedometer = helpers_speedometer(50, 250);
+
+  return helpers_throttle(e => {
+    const loaded = e.loaded;
+    const total = e.lengthComputable ? e.total : undefined;
+    const progressBytes = loaded - bytesNotified;
+    const rate = _speedometer(progressBytes);
+    const inRange = loaded <= total;
+
+    bytesNotified = loaded;
+
+    const data = {
+      loaded,
+      total,
+      progress: total ? (loaded / total) : undefined,
+      bytes: progressBytes,
+      rate: rate ? rate : undefined,
+      estimated: rate && total && inRange ? (total - loaded) / rate : undefined,
+      event: e,
+      lengthComputable: total != null,
+      [isDownloadStream ? 'download' : 'upload']: true
+    };
+
+    listener(data);
+  }, freq);
+}
+
+const progressEventDecorator = (total, throttled) => {
+  const lengthComputable = total != null;
+
+  return [(loaded) => throttled[0]({
+    lengthComputable,
+    total,
+    loaded
+  }), throttled[1]];
+}
+
+const asyncDecorator = (fn) => (...args) => utils.asap(() => fn(...args));
+
 ;// CONCATENATED MODULE: ./node_modules/axios/lib/adapters/http.js
+
 
 
 
@@ -92904,6 +93158,14 @@ const isHttps = /https:?/;
 const supportedProtocols = platform.protocols.map(protocol => {
   return protocol + ':';
 });
+
+const flushOnFinish = (stream, [throttled, flush]) => {
+  stream
+    .on('end', flush)
+    .on('error', flush);
+
+  return throttled;
+}
 
 /**
  * If the proxy or config beforeRedirects functions are defined, call them with the options
@@ -93080,7 +93342,7 @@ const buildAddressEntry = (address, family) => resolveFamily(utils.isObject(addr
 
     // Parse url
     const fullPath = buildFullPath(config.baseURL, config.url);
-    const parsed = new URL(fullPath, 'http://localhost');
+    const parsed = new URL(fullPath, utils.hasBrowserEnv ? platform.origin : undefined);
     const protocol = parsed.protocol || supportedProtocols[0];
 
     if (protocol === 'data:') {
@@ -93138,8 +93400,7 @@ const buildAddressEntry = (address, family) => resolveFamily(utils.isObject(addr
     // Only set header if it hasn't been set in config
     headers.set('User-Agent', 'axios/' + VERSION, false);
 
-    const onDownloadProgress = config.onDownloadProgress;
-    const onUploadProgress = config.onUploadProgress;
+    const {onUploadProgress, onDownloadProgress} = config;
     const maxRate = config.maxRate;
     let maxUploadRate = undefined;
     let maxDownloadRate = undefined;
@@ -93212,15 +93473,16 @@ const buildAddressEntry = (address, family) => resolveFamily(utils.isObject(addr
       }
 
       data = external_stream_.pipeline([data, new helpers_AxiosTransformStream({
-        length: contentLength,
         maxRate: utils.toFiniteNumber(maxUploadRate)
       })], utils.noop);
 
-      onUploadProgress && data.on('progress', progress => {
-        onUploadProgress(Object.assign(progress, {
-          upload: true
-        }));
-      });
+      onUploadProgress && data.on('progress', flushOnFinish(
+        data,
+        progressEventDecorator(
+          contentLength,
+          progressEventReducer(asyncDecorator(onUploadProgress), false, 3)
+        )
+      ));
     }
 
     // HTTP basic authentication
@@ -93319,17 +93581,18 @@ const buildAddressEntry = (address, family) => resolveFamily(utils.isObject(addr
 
       const responseLength = +res.headers['content-length'];
 
-      if (onDownloadProgress) {
+      if (onDownloadProgress || maxDownloadRate) {
         const transformStream = new helpers_AxiosTransformStream({
-          length: utils.toFiniteNumber(responseLength),
           maxRate: utils.toFiniteNumber(maxDownloadRate)
         });
 
-        onDownloadProgress && transformStream.on('progress', progress => {
-          onDownloadProgress(Object.assign(progress, {
-            download: true
-          }));
-        });
+        onDownloadProgress && transformStream.on('progress', flushOnFinish(
+          transformStream,
+          progressEventDecorator(
+            responseLength,
+            progressEventReducer(asyncDecorator(onDownloadProgress), true, 3)
+          )
+        ));
 
         streams.push(transformStream);
       }
@@ -93543,40 +93806,6 @@ const buildAddressEntry = (address, family) => resolveFamily(utils.isObject(addr
 });
 
 const __setProxy = (/* unused pure expression or super */ null && (setProxy));
-
-;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/progressEventReducer.js
-
-
-
-/* harmony default export */ const progressEventReducer = ((listener, isDownloadStream, freq = 3) => {
-  let bytesNotified = 0;
-  const _speedometer = helpers_speedometer(50, 250);
-
-  return helpers_throttle(e => {
-    const loaded = e.loaded;
-    const total = e.lengthComputable ? e.total : undefined;
-    const progressBytes = loaded - bytesNotified;
-    const rate = _speedometer(progressBytes);
-    const inRange = loaded <= total;
-
-    bytesNotified = loaded;
-
-    const data = {
-      loaded,
-      total,
-      progress: total ? (loaded / total) : undefined,
-      bytes: progressBytes,
-      rate: rate ? rate : undefined,
-      estimated: rate && total && inRange ? (total - loaded) / rate : undefined,
-      event: e,
-      lengthComputable: total != null
-    };
-
-    data[isDownloadStream ? 'download' : 'upload'] = true;
-
-    listener(data);
-  }, freq);
-});
 
 ;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/isURLSameOrigin.js
 
@@ -93877,16 +94106,18 @@ const isXHRAdapterSupported = typeof XMLHttpRequest !== 'undefined';
     const _config = resolveConfig(config);
     let requestData = _config.data;
     const requestHeaders = core_AxiosHeaders.from(_config.headers).normalize();
-    let {responseType} = _config;
+    let {responseType, onUploadProgress, onDownloadProgress} = _config;
     let onCanceled;
-    function done() {
-      if (_config.cancelToken) {
-        _config.cancelToken.unsubscribe(onCanceled);
-      }
+    let uploadThrottled, downloadThrottled;
+    let flushUpload, flushDownload;
 
-      if (_config.signal) {
-        _config.signal.removeEventListener('abort', onCanceled);
-      }
+    function done() {
+      flushUpload && flushUpload(); // flush events
+      flushDownload && flushDownload(); // flush events
+
+      _config.cancelToken && _config.cancelToken.unsubscribe(onCanceled);
+
+      _config.signal && _config.signal.removeEventListener('abort', onCanceled);
     }
 
     let request = new XMLHttpRequest();
@@ -93956,7 +94187,7 @@ const isXHRAdapterSupported = typeof XMLHttpRequest !== 'undefined';
         return;
       }
 
-      reject(new core_AxiosError('Request aborted', core_AxiosError.ECONNABORTED, _config, request));
+      reject(new core_AxiosError('Request aborted', core_AxiosError.ECONNABORTED, config, request));
 
       // Clean up request
       request = null;
@@ -93966,7 +94197,7 @@ const isXHRAdapterSupported = typeof XMLHttpRequest !== 'undefined';
     request.onerror = function handleError() {
       // Real errors are hidden from us by the browser
       // onerror should only fire if it's a network error
-      reject(new core_AxiosError('Network Error', core_AxiosError.ERR_NETWORK, _config, request));
+      reject(new core_AxiosError('Network Error', core_AxiosError.ERR_NETWORK, config, request));
 
       // Clean up request
       request = null;
@@ -93982,7 +94213,7 @@ const isXHRAdapterSupported = typeof XMLHttpRequest !== 'undefined';
       reject(new core_AxiosError(
         timeoutErrorMessage,
         transitional.clarifyTimeoutError ? core_AxiosError.ETIMEDOUT : core_AxiosError.ECONNABORTED,
-        _config,
+        config,
         request));
 
       // Clean up request
@@ -94010,13 +94241,18 @@ const isXHRAdapterSupported = typeof XMLHttpRequest !== 'undefined';
     }
 
     // Handle progress if needed
-    if (typeof _config.onDownloadProgress === 'function') {
-      request.addEventListener('progress', progressEventReducer(_config.onDownloadProgress, true));
+    if (onDownloadProgress) {
+      ([downloadThrottled, flushDownload] = progressEventReducer(onDownloadProgress, true));
+      request.addEventListener('progress', downloadThrottled);
     }
 
     // Not all browsers support upload events
-    if (typeof _config.onUploadProgress === 'function' && request.upload) {
-      request.upload.addEventListener('progress', progressEventReducer(_config.onUploadProgress));
+    if (onUploadProgress && request.upload) {
+      ([uploadThrottled, flushUpload] = progressEventReducer(onUploadProgress));
+
+      request.upload.addEventListener('progress', uploadThrottled);
+
+      request.upload.addEventListener('loadend', flushUpload);
     }
 
     if (_config.cancelToken || _config.signal) {
@@ -94100,7 +94336,6 @@ const composeSignals = (signals, timeout) => {
 
 ;// CONCATENATED MODULE: ./node_modules/axios/lib/helpers/trackStream.js
 
-
 const streamChunk = function* (chunk, chunkSize) {
   let len = chunk.byteLength;
 
@@ -94129,25 +94364,38 @@ const trackStream = (stream, chunkSize, onProgress, onFinish, encode) => {
   const iterator = readBytes(stream, chunkSize, encode);
 
   let bytes = 0;
+  let done;
+  let _onFinish = (e) => {
+    if (!done) {
+      done = true;
+      onFinish && onFinish(e);
+    }
+  }
 
   return new ReadableStream({
-    type: 'bytes',
-
     async pull(controller) {
-      const {done, value} = await iterator.next();
+      try {
+        const {done, value} = await iterator.next();
 
-      if (done) {
-        controller.close();
-        onFinish();
-        return;
+        if (done) {
+         _onFinish();
+          controller.close();
+          return;
+        }
+
+        let len = value.byteLength;
+        if (onProgress) {
+          let loadedBytes = bytes += len;
+          onProgress(loadedBytes);
+        }
+        controller.enqueue(new Uint8Array(value));
+      } catch (err) {
+        _onFinish(err);
+        throw err;
       }
-
-      let len = value.byteLength;
-      onProgress && onProgress(bytes += len);
-      controller.enqueue(new Uint8Array(value));
     },
     cancel(reason) {
-      onFinish(reason);
+      _onFinish(reason);
       return iterator.return();
     }
   }, {
@@ -94166,15 +94414,6 @@ const trackStream = (stream, chunkSize, onProgress, onFinish, encode) => {
 
 
 
-const fetchProgressDecorator = (total, fn) => {
-  const lengthComputable = total != null;
-  return (loaded) => setTimeout(() => fn({
-    lengthComputable,
-    total,
-    loaded
-  }));
-}
-
 const isFetchSupported = typeof fetch === 'function' && typeof Request === 'function' && typeof Response === 'function';
 const isReadableStreamSupported = isFetchSupported && typeof ReadableStream === 'function';
 
@@ -94184,7 +94423,15 @@ const encodeText = isFetchSupported && (typeof TextEncoder === 'function' ?
     async (str) => new Uint8Array(await new Response(str).arrayBuffer())
 );
 
-const supportsRequestStream = isReadableStreamSupported && (() => {
+const test = (fn, ...args) => {
+  try {
+    return !!fn(...args);
+  } catch (e) {
+    return false
+  }
+}
+
+const supportsRequestStream = isReadableStreamSupported && test(() => {
   let duplexAccessed = false;
 
   const hasContentType = new Request(platform.origin, {
@@ -94197,17 +94444,13 @@ const supportsRequestStream = isReadableStreamSupported && (() => {
   }).headers.has('Content-Type');
 
   return duplexAccessed && !hasContentType;
-})();
+});
 
 const DEFAULT_CHUNK_SIZE = 64 * 1024;
 
-const supportsResponseStream = isReadableStreamSupported && !!(()=> {
-  try {
-    return utils.isReadableStream(new Response('').body);
-  } catch(err) {
-    // return undefined
-  }
-})();
+const supportsResponseStream = isReadableStreamSupported &&
+  test(() => utils.isReadableStream(new Response('').body));
+
 
 const resolvers = {
   stream: supportsResponseStream && ((res) => res.body)
@@ -94235,7 +94478,7 @@ const getBodyLength = async (body) => {
     return (await new Request(body).arrayBuffer()).byteLength;
   }
 
-  if(utils.isArrayBufferView(body)) {
+  if(utils.isArrayBufferView(body) || utils.isArrayBuffer(body)) {
     return body.byteLength;
   }
 
@@ -94305,15 +94548,17 @@ const resolveBodyLength = async (headers, body) => {
       }
 
       if (_request.body) {
-        data = trackStream(_request.body, DEFAULT_CHUNK_SIZE, fetchProgressDecorator(
+        const [onProgress, flush] = progressEventDecorator(
           requestContentLength,
-          progressEventReducer(onUploadProgress)
-        ), null, encodeText);
+          progressEventReducer(asyncDecorator(onUploadProgress))
+        );
+
+        data = trackStream(_request.body, DEFAULT_CHUNK_SIZE, onProgress, flush, encodeText);
       }
     }
 
     if (!utils.isString(withCredentials)) {
-      withCredentials = withCredentials ? 'cors' : 'omit';
+      withCredentials = withCredentials ? 'include' : 'omit';
     }
 
     request = new Request(url, {
@@ -94323,7 +94568,7 @@ const resolveBodyLength = async (headers, body) => {
       headers: headers.normalize().toJSON(),
       body: data,
       duplex: "half",
-      withCredentials
+      credentials: withCredentials
     });
 
     let response = await fetch(request);
@@ -94339,11 +94584,16 @@ const resolveBodyLength = async (headers, body) => {
 
       const responseContentLength = utils.toFiniteNumber(response.headers.get('content-length'));
 
+      const [onProgress, flush] = onDownloadProgress && progressEventDecorator(
+        responseContentLength,
+        progressEventReducer(asyncDecorator(onDownloadProgress), true)
+      ) || [];
+
       response = new Response(
-        trackStream(response.body, DEFAULT_CHUNK_SIZE, onDownloadProgress && fetchProgressDecorator(
-          responseContentLength,
-          progressEventReducer(onDownloadProgress, true)
-        ), isStreamResponse && onFinish, encodeText),
+        trackStream(response.body, DEFAULT_CHUNK_SIZE, onProgress, () => {
+          flush && flush();
+          isStreamResponse && onFinish();
+        }, encodeText),
         options
       );
     }
