@@ -1,0 +1,18 @@
+# They are not part of the build process, dependencies used for testing"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2021-0145"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2022-0078"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0018"
+
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0001"
+
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0005"
