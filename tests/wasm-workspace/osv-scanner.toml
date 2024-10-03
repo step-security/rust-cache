@@ -1,19 +1,19 @@
 # They are not part of the build process, dependencies used for testing"
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2021-0145"
+id = "GHSA-g98v-hv3f-hcfr"
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2022-0078"
+id = "GHSA-f85w-wvc7-crwc"
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2023-0018"
+id = "GHSA-mc8h-8q98-g5hr"
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2023-0001"
+id = "GHSA-7rrj-xr53-82p7"
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2023-0005"
+id = "GHSA-4q83-7cq4-p6wg"
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2024-0375" 
