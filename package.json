@@ -33,6 +33,6 @@
     "typescript": "5.4.3"
   },
   "scripts": {
-    "prepare": "ncc build --target es2020 -o dist/restore src/restore.ts && ncc build --target es2020 -o dist/save src/save.ts && linefix dist"
+    "build": "ncc build --target es2020 -o dist/restore src/restore.ts && ncc build --target es2020 -o dist/save src/save.ts && linefix dist"
   }
 }
