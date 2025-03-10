@@ -237,12 +237,15 @@ jobs:
             fi
 
 
-            FILTERED_FILES=$(echo "$MODIFIED_FILES" | grep -Ev "^package.json$|^package-lock.json$|^yarn.lock$|^node_modules/|^dist/|^.gitignore")
+            echo "DEBUG: MODIFIED_FILES Before Filtering:"
+            echo "$MODIFIED_FILES"
+
+            FILTERED_FILES=$(echo "$MODIFIED_FILES" | grep -Ev "^package.json$|^package-lock.json$|^yarn.lock$|^node_modules/|^dist/|^.gitignore" || echo "")
 
             echo "DEBUG: FILTERED_FILES After Filtering:"
             echo "$FILTERED_FILES"
 
-            if [ -z "$FILTERED_FILES" ]; then
+            if [ -z "$FILTERED_FILES" ] || [ "$FILTERED_FILES" == "null" ]; then
               echo "⚠️ Skipping commit $COMMIT_HASH as it only contains ignored file changes."
               SKIPPED_COMMITS="${SKIPPED_COMMITS}\n$COMMIT_HASH"
               continue
