@@ -252,7 +252,7 @@ jobs:
                 FILE_RESPONSE=$(gh api "repos/$TARGET_REPO/contents/$file?ref=$BRANCH" 2>/dev/null || echo "ERROR")
                 SHA=$(echo "$FILE_RESPONSE" | jq -r .sha 2>/dev/null || echo "null")
 
-                if [ "$FILE_RESPONSE" == "ERROR" ] || [ -z "$SHA" ] || [ "$SHA" == "null" ]; then
+                if [[ "$FILE_RESPONSE" == "ERROR" ]] || [[ -z "$SHA" ]] || [[ "$SHA" == "null" ]] || [[ "$FILE_RESPONSE" == *"Not Found"* ]]; then
                   echo "⚠️ File $file does not exist in target repo."
                   MISSING_FILES="${MISSING_FILES}\n$file"
                   continue
