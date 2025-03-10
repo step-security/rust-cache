@@ -192,8 +192,6 @@ jobs:
 
       - name: Cherry-Pick Changes via gh CLI
         run: |
-          set -e  # Keep this, but ensure we handle errors properly
-
           UPSTREAM_REPO="${{ inputs.original-owner }}/${{ inputs.repo-name }}"
           TARGET_REPO="${{ github.repository }}"
           BRANCH="${{ env.BRANCH_NAME }}"
@@ -236,10 +234,6 @@ jobs:
               continue
             fi
 
-
-            echo "DEBUG: MODIFIED_FILES Before Filtering:"
-            echo "$MODIFIED_FILES"
-
             FILTERED_FILES=$(echo "$MODIFIED_FILES" | grep -Ev "^package.json$|^package-lock.json$|^yarn.lock$|^node_modules/|^dist/|^.gitignore" || echo "")
 
             echo "DEBUG: FILTERED_FILES After Filtering:"
@@ -250,7 +244,6 @@ jobs:
               SKIPPED_COMMITS="${SKIPPED_COMMITS}\n$COMMIT_HASH"
               continue
             fi
-
 
             for file in $FILTERED_FILES; do
                 echo "Processing file: $file"
