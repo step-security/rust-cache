@@ -60,7 +60,7 @@ sensible defaults.
     # default: "false"
     cache-all-crates: ""
 
-    # Determiners whether the cache should be saved.
+    # Determines whether the cache should be saved.
     # If `false`, the cache is only restored.
     # Useful for jobs where the matrix is additive e.g. additional Cargo features,
     # or when only runs from `main` should be saved to the cache.
@@ -69,10 +69,20 @@ sensible defaults.
     # To only cache runs from `main`:
     save-if: ${{ github.ref == 'refs/heads/main' }}
 
+    # Determines whether the cache should be restored.
+    # If `true` the cache key will be checked and the `cache-hit` output will be set
+    # but the cache itself won't be restored
+    # default: "false"
+    lookup-only: ""
+
     # Specifies what to use as the backend providing cache
     # Can be set to either "github" or "buildjet"
     # default: "github"
     cache-provider: ""
+
+    # Determines whether to cache the ~/.cargo/bin directory.
+    # default: "true"
+    cache-bin: ""
 ```
 
 Further examples are available in the [.github/workflows](./.github/workflows/) directory.
@@ -169,4 +179,7 @@ to see those details as well as further details related to caching operations.
 ## Known issues
 
 - The cache cleaning process currently removes all the files from `~/.cargo/bin`
-  that were present before the action ran (for example `rustc`).
+  that were present before the action ran (for example `rustc`), by default.
+  This can be an issue on long-running self-hosted runners, where such state
+  is expected to be preserved across runs.  You can work around this by setting
+  `cache-bin: "false"`.

@@ -89960,10 +89960,10 @@ class Workspace {
         return packages;
     }
     async getPackagesOutsideWorkspaceRoot() {
-        return await this.getPackages(pkg => !pkg.manifest_path.startsWith(this.root));
+        return await this.getPackages((pkg) => !pkg.manifest_path.startsWith(this.root));
     }
     async getWorkspaceMembers() {
-        return await this.getPackages(_ => true, "--no-deps");
+        return await this.getPackages((_) => true, "--no-deps");
     }
 }
 
@@ -89991,6 +89991,8 @@ class CacheConfig {
         this.cacheKey = "";
         /** The secondary (restore) key that only contains the prefix and environment */
         this.restoreKey = "";
+        /** Whether to cache CARGO_HOME/.bin */
+        this.cacheBin = true;
         /** The workspace configurations */
         this.workspaces = [];
         /** The cargo binaries present during main step */
@@ -90029,6 +90031,10 @@ class CacheConfig {
                 key += `-${job}`;
             }
         }
+        // Add runner OS and CPU architecture to the key to avoid cross-contamination of cache
+        const runnerOS = external_os_default().type();
+        const runnerArch = external_os_default().arch();
+        key += `-${runnerOS}-${runnerArch}`;
         self.keyPrefix = key;
         // Construct environment portion of the key:
         // This consists of a hash that considers the rust version
@@ -90063,6 +90069,7 @@ class CacheConfig {
         // Construct the lockfiles portion of the key:
         // This considers all the files found via globbing for various manifests
         // and lockfiles.
+        self.cacheBin = lib_core.getInput("cache-bin").toLowerCase() == "true";
         // Constructs the workspace config and paths to restore:
         // The workspaces are given using a `$workspace -> $target` syntax.
         const workspaces = [];
@@ -90081,7 +90088,7 @@ class CacheConfig {
             const root = workspace.root;
             keyFiles.push(...(await globFiles(`${root}/**/.cargo/config.toml\n${root}/**/rust-toolchain\n${root}/**/rust-toolchain.toml`)));
             const workspaceMembers = await workspace.getWorkspaceMembers();
-            const cargo_manifests = sort_and_uniq(workspaceMembers.map(member => external_path_default().join(member.path, "Cargo.toml")));
+            const cargo_manifests = sort_and_uniq(workspaceMembers.map((member) => external_path_default().join(member.path, "Cargo.toml")));
             for (const cargo_manifest of cargo_manifests) {
                 try {
                     const content = await promises_default().readFile(cargo_manifest, { encoding: "utf8" });
@@ -90117,7 +90124,8 @@ class CacheConfig {
                     hasher.update(JSON.stringify(parsed));
                     parsedKeyFiles.push(cargo_manifest);
                 }
-                catch (e) { // Fallback to caching them as regular file
+                catch (e) {
+                    // Fallback to caching them as regular file
                     lib_core.warning(`Error parsing Cargo.toml manifest, fallback to caching entire file: ${e}`);
                     keyFiles.push(cargo_manifest);
                 }
@@ -90127,10 +90135,10 @@ class CacheConfig {
                 try {
                     const content = await promises_default().readFile(cargo_lock, { encoding: "utf8" });
                     const parsed = parse(content);
-                    if (parsed.version !== 3 || !("package" in parsed)) {
+                    if ((parsed.version !== 3 && parsed.version !== 4) || !("package" in parsed)) {
                         // Fallback to caching them as regular file since this action
                         // can only handle Cargo.lock format version 3
-                        lib_core.warning('Unsupported Cargo.lock format, fallback to caching entire file');
+                        lib_core.warning("Unsupported Cargo.lock format, fallback to caching entire file");
                         keyFiles.push(cargo_lock);
                         continue;
                     }
@@ -90140,7 +90148,8 @@ class CacheConfig {
                     hasher.update(JSON.stringify(packages));
                     parsedKeyFiles.push(cargo_lock);
                 }
-                catch (e) { // Fallback to caching them as regular file
+                catch (e) {
+                    // Fallback to caching them as regular file
                     lib_core.warning(`Error parsing Cargo.lock manifest, fallback to caching entire file: ${e}`);
                     keyFiles.push(cargo_lock);
                 }
@@ -90157,7 +90166,15 @@ class CacheConfig {
         self.keyFiles = sort_and_uniq(keyFiles);
         key += `-${lockHash}`;
         self.cacheKey = key;
-        self.cachePaths = [config_CARGO_HOME];
+        self.cachePaths = [external_path_default().join(config_CARGO_HOME, "registry"), external_path_default().join(config_CARGO_HOME, "git")];
+        if (self.cacheBin) {
+            self.cachePaths = [
+                external_path_default().join(config_CARGO_HOME, "bin"),
+                external_path_default().join(config_CARGO_HOME, ".crates.toml"),
+                external_path_default().join(config_CARGO_HOME, ".crates2.json"),
+                ...self.cachePaths,
+            ];
+        }
         const cacheTargets = lib_core.getInput("cache-targets").toLowerCase() || "true";
         if (cacheTargets === "true") {
             self.cachePaths.push(...workspaces.map((ws) => ws.target));
@@ -95709,20 +95726,23 @@ async function run() {
         if (cacheOnFailure !== "true") {
             cacheOnFailure = "false";
         }
+        var lookupOnly = lib_core.getInput("lookup-only").toLowerCase() === "true";
         lib_core.exportVariable("CACHE_ON_FAILURE", cacheOnFailure);
         lib_core.exportVariable("CARGO_INCREMENTAL", 0);
         const config = await CacheConfig["new"]();
         config.printInfo(cacheProvider);
         lib_core.info("");
-        lib_core.info(`... Restoring cache ...`);
+        lib_core.info(`... ${lookupOnly ? "Checking" : "Restoring"} cache ...`);
         const key = config.cacheKey;
         // Pass a copy of cachePaths to avoid mutating the original array as reported by:
         // https://github.com/actions/toolkit/pull/1378
         // TODO: remove this once the underlying bug is fixed.
-        const restoreKey = await cacheProvider.cache.restoreCache(config.cachePaths.slice(), key, [config.restoreKey]);
+        const restoreKey = await cacheProvider.cache.restoreCache(config.cachePaths.slice(), key, [config.restoreKey], {
+            lookupOnly,
+        });
         if (restoreKey) {
             const match = restoreKey === key;
-            lib_core.info(`Restored from cache key "${restoreKey}" full match: ${match}.`);
+            lib_core.info(`${lookupOnly ? "Found" : "Restored from"} cache key "${restoreKey}" full match: ${match}.`);
             if (!match) {
                 // pre-clean the target directory on cache mismatch
                 for (const workspace of config.workspaces) {

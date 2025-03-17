@@ -32,7 +32,9 @@ async function run() {
     core.info("");
 
     // TODO: remove this once https://github.com/actions/toolkit/pull/553 lands
-    await macOsWorkaround();
+    if (process.env["RUNNER_OS"] == "macOS") {
+      await macOsWorkaround();
+    }
 
     const allPackages = [];
     for (const workspace of config.workspaces) {
@@ -54,11 +56,13 @@ async function run() {
       core.debug(`${(e as any).stack}`);
     }
 
-    try {
-      core.info(`... Cleaning cargo/bin ...`);
-      await cleanBin(config.cargoBins);
-    } catch (e) {
-      core.debug(`${(e as any).stack}`);
+    if (config.cacheBin) {
+      try {
+        core.info(`... Cleaning cargo/bin ...`);
+        await cleanBin(config.cargoBins);
+      } catch (e) {
+        core.debug(`${(e as any).stack}`);
+      }
     }
 
     try {
