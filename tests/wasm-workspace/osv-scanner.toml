@@ -26,3 +26,15 @@ id = "RUSTSEC-2024-0384"
 
 [[IgnoredVulns]]
 id = "RUSTSEC-2025-0004" 
+
+[[IgnoredVulns]]
+id = "GHSA-4fcv-w3qc-ppgg" 
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0022" 
+
+[[IgnoredVulns]]
+id = "GHSA-rr8g-9fpq-6wmg" 
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0023" 
