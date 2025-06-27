@@ -31,12 +31,16 @@ inputs:
     description: "Determines which crates are cached. If `true` all crates will be cached, otherwise only dependent crates will be cached."
     required: false
     default: "false"
+  cache-workspace-crates:
+    description: "Similar to cache-all-crates. If `true` the workspace crates will be cached."
+    required: false
+    default: "false"
   save-if:
     description: "Determiners whether the cache should be saved. If `false`, the cache is only restored."
     required: false
     default: "true"
   cache-provider:
-    description: "Determines which provider to use for caching. Options are github or buildjet, defaults to github."
+    description: "Determines which provider to use for caching. Options are github, buildjet, or warpbuild. Defaults to github."
     required: false
     default: "github"
   cache-bin:

@@ -60,6 +60,12 @@ sensible defaults.
     # default: "false"
     cache-all-crates: ""
 
+    # Similar to cache-all-crates.
+    # If `true` the workspace crates will be cached.
+    # Useful if the workspace contains libraries that are only updated sporadically.
+    # default: "false"
+    cache-workspace-crates: ""
+
     # Determines whether the cache should be saved.
     # If `false`, the cache is only restored.
     # Useful for jobs where the matrix is additive e.g. additional Cargo features,
@@ -76,7 +82,7 @@ sensible defaults.
     lookup-only: ""
 
     # Specifies what to use as the backend providing cache
-    # Can be set to either "github" or "buildjet"
+    # Can be set to "github", "buildjet", or "warpbuild"
     # default: "github"
     cache-provider: ""
 
