@@ -144177,6 +144177,7 @@ class Workspace {
             core.debug(`collecting metadata for "${this.root}"`);
             const meta = JSON.parse(await getCmdOutput("cargo", ["metadata", "--all-features", "--format-version", "1", ...extraArgs], {
                 cwd: this.root,
+                env: { "CARGO_ENCODED_RUSTFLAGS": "" },
             }));
             core.debug(`workspace "${this.root}" has ${meta.packages.length} packages`);
             for (const pkg of meta.packages.filter(filter)) {
