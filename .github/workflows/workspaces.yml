@@ -31,8 +31,10 @@ jobs:
             tests
             tests/wasm-workspace
 
-      - run: cargo check
+      - name: cargo check (tests)
         working-directory: tests
+        run: cargo check
 
-      - run: cargo check
+      - name: cargo check (tests/wasm-workspace)
         working-directory: tests/wasm-workspace
+        run: cargo check
