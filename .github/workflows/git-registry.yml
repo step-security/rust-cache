@@ -1,13 +1,17 @@
 name: git-registry
 
-on: [push, pull_request]
+on: 
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   git-registry:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "macos-latest", "windows-latest"]') }}
 
     name: Test cargo "git" registry on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

@@ -1,13 +1,17 @@
 name: workspaces
 
-on: [push, pull_request]
+on: 
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   workspaces:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "macos-latest", "windows-latest"]') }}
 
     name: Test multiple workspaces on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
