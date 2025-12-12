@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions: {}
+
 jobs:
   workspaces:
     strategy:
@@ -25,7 +27,9 @@ jobs:
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown --no-self-update
 

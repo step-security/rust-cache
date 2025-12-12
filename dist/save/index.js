@@ -144187,7 +144187,7 @@ class Workspace {
             core.debug(`collecting metadata for "${this.root}"`);
             const meta = JSON.parse(await getCmdOutput("cargo", ["metadata", "--all-features", "--format-version", "1", ...extraArgs], {
                 cwd: this.root,
-                env: { "CARGO_ENCODED_RUSTFLAGS": "" },
+                env: { ...process.env, "CARGO_ENCODED_RUSTFLAGS": "" },
             }));
             core.debug(`workspace "${this.root}" has ${meta.packages.length} packages`);
             for (const pkg of meta.packages.filter(filter)) {
@@ -144268,7 +144268,7 @@ class CacheConfig {
                 key += `-${inputKey}`;
             }
             const job = process.env.GITHUB_JOB;
-            if (job) {
+            if ((job) && core.getInput("add-job-id-key").toLowerCase() == "true") {
                 key += `-${job}`;
             }
         }
@@ -144305,7 +144305,10 @@ class CacheConfig {
             }
         }
         self.keyEnvs = keyEnvs;
-        key += `-${digest(hasher)}`;
+        // Add job hash suffix if 'add-rust-environment-hash-key' is true
+        if (core.getInput("add-rust-environment-hash-key").toLowerCase() == "true") {
+            key += `-${digest(hasher)}`;
+        }
         self.restoreKey = key;
         // Construct the lockfiles portion of the key:
         // This considers all the files found via globbing for various manifests
@@ -144322,90 +144325,94 @@ class CacheConfig {
             workspaces.push(new Workspace(root, target));
         }
         self.workspaces = workspaces;
-        let keyFiles = await globFiles(".cargo/config.toml\nrust-toolchain\nrust-toolchain.toml");
-        const parsedKeyFiles = []; // keyFiles that are parsed, pre-processed and hashed
-        hasher = external_crypto_default().createHash("sha1");
-        for (const workspace of workspaces) {
-            const root = workspace.root;
-            keyFiles.push(...(await globFiles(`${root}/**/.cargo/config.toml\n${root}/**/rust-toolchain\n${root}/**/rust-toolchain.toml`)));
-            const workspaceMembers = await workspace.getWorkspaceMembers();
-            const cargo_manifests = sort_and_uniq(workspaceMembers.map((member) => external_path_default().join(member.path, "Cargo.toml")));
-            for (const cargo_manifest of cargo_manifests) {
-                try {
-                    const content = await promises_default().readFile(cargo_manifest, { encoding: "utf8" });
-                    // Use any since TomlPrimitive is not exposed
-                    const parsed = parse(content);
-                    if ("package" in parsed) {
-                        const pack = parsed.package;
-                        if ("version" in pack) {
-                            pack["version"] = "0.0.0";
-                        }
-                    }
-                    for (const prefix of ["", "build-", "dev-"]) {
-                        const section_name = `${prefix}dependencies`;
-                        if (!(section_name in parsed)) {
-                            continue;
-                        }
-                        const deps = parsed[section_name];
-                        for (const key of Object.keys(deps)) {
-                            const dep = deps[key];
-                            try {
-                                if ("path" in dep) {
-                                    dep.version = "0.0.0";
-                                    dep.path = "";
-                                }
+        // Add hash suffix of all rust environment lockfiles + manifests if
+        // 'add-rust-environment-hash-key' is true
+        if (core.getInput("add-rust-environment-hash-key").toLowerCase() == "true") {
+            let keyFiles = await globFiles(".cargo/config.toml\nrust-toolchain\nrust-toolchain.toml");
+            const parsedKeyFiles = []; // keyFiles that are parsed, pre-processed and hashed
+            hasher = external_crypto_default().createHash("sha1");
+            for (const workspace of workspaces) {
+                const root = workspace.root;
+                keyFiles.push(...(await globFiles(`${root}/**/.cargo/config.toml\n${root}/**/rust-toolchain\n${root}/**/rust-toolchain.toml`)));
+                const workspaceMembers = await workspace.getWorkspaceMembers();
+                const cargo_manifests = sort_and_uniq(workspaceMembers.map((member) => external_path_default().join(member.path, "Cargo.toml")));
+                for (const cargo_manifest of cargo_manifests) {
+                    try {
+                        const content = await promises_default().readFile(cargo_manifest, { encoding: "utf8" });
+                        // Use any since TomlPrimitive is not exposed
+                        const parsed = parse(content);
+                        if ("package" in parsed) {
+                            const pack = parsed.package;
+                            if ("version" in pack) {
+                                pack["version"] = "0.0.0";
                             }
-                            catch (_e) {
-                                // Not an object, probably a string (version),
-                                // continue.
+                        }
+                        for (const prefix of ["", "build-", "dev-"]) {
+                            const section_name = `${prefix}dependencies`;
+                            if (!(section_name in parsed)) {
                                 continue;
                             }
+                            const deps = parsed[section_name];
+                            for (const key of Object.keys(deps)) {
+                                const dep = deps[key];
+                                try {
+                                    if ("path" in dep) {
+                                        dep.version = "0.0.0";
+                                        dep.path = "";
+                                    }
+                                }
+                                catch (_e) {
+                                    // Not an object, probably a string (version),
+                                    // continue.
+                                    continue;
+                                }
+                            }
                         }
+                        hasher.update(JSON.stringify(parsed));
+                        parsedKeyFiles.push(cargo_manifest);
                     }
-                    hasher.update(JSON.stringify(parsed));
-                    parsedKeyFiles.push(cargo_manifest);
+                    catch (e) {
+                        // Fallback to caching them as regular file
+                        core.warning(`Error parsing Cargo.toml manifest, fallback to caching entire file: ${e}`);
+                        keyFiles.push(cargo_manifest);
+                    }
                 }
-                catch (e) {
-                    // Fallback to caching them as regular file
-                    core.warning(`Error parsing Cargo.toml manifest, fallback to caching entire file: ${e}`);
-                    keyFiles.push(cargo_manifest);
-                }
-            }
-            const cargo_lock = external_path_default().join(workspace.root, "Cargo.lock");
-            if (await exists(cargo_lock)) {
-                try {
-                    const content = await promises_default().readFile(cargo_lock, { encoding: "utf8" });
-                    const parsed = parse(content);
-                    if ((parsed.version !== 3 && parsed.version !== 4) || !("package" in parsed)) {
-                        // Fallback to caching them as regular file since this action
-                        // can only handle Cargo.lock format version 3
-                        core.warning("Unsupported Cargo.lock format, fallback to caching entire file");
+                const cargo_lock = external_path_default().join(workspace.root, "Cargo.lock");
+                if (await exists(cargo_lock)) {
+                    try {
+                        const content = await promises_default().readFile(cargo_lock, { encoding: "utf8" });
+                        const parsed = parse(content);
+                        if ((parsed.version !== 3 && parsed.version !== 4) || !("package" in parsed)) {
+                            // Fallback to caching them as regular file since this action
+                            // can only handle Cargo.lock format version 3
+                            core.warning("Unsupported Cargo.lock format, fallback to caching entire file");
+                            keyFiles.push(cargo_lock);
+                            continue;
+                        }
+                        // Package without `[[package]].source` and `[[package]].checksum`
+                        // are the one with `path = "..."` to crates within the workspace.
+                        const packages = parsed.package.filter((p) => "source" in p || "checksum" in p);
+                        hasher.update(JSON.stringify(packages));
+                        parsedKeyFiles.push(cargo_lock);
+                    }
+                    catch (e) {
+                        // Fallback to caching them as regular file
+                        core.warning(`Error parsing Cargo.lock manifest, fallback to caching entire file: ${e}`);
                         keyFiles.push(cargo_lock);
-                        continue;
                     }
-                    // Package without `[[package]].source` and `[[package]].checksum`
-                    // are the one with `path = "..."` to crates within the workspace.
-                    const packages = parsed.package.filter((p) => "source" in p || "checksum" in p);
-                    hasher.update(JSON.stringify(packages));
-                    parsedKeyFiles.push(cargo_lock);
-                }
-                catch (e) {
-                    // Fallback to caching them as regular file
-                    core.warning(`Error parsing Cargo.lock manifest, fallback to caching entire file: ${e}`);
-                    keyFiles.push(cargo_lock);
                 }
             }
-        }
-        keyFiles = sort_and_uniq(keyFiles);
-        for (const file of keyFiles) {
-            for await (const chunk of external_fs_default().createReadStream(file)) {
-                hasher.update(chunk);
+            keyFiles = sort_and_uniq(keyFiles);
+            for (const file of keyFiles) {
+                for await (const chunk of external_fs_default().createReadStream(file)) {
+                    hasher.update(chunk);
+                }
             }
+            keyFiles.push(...parsedKeyFiles);
+            self.keyFiles = sort_and_uniq(keyFiles);
+            let lockHash = digest(hasher);
+            key += `-${lockHash}`;
         }
-        let lockHash = digest(hasher);
-        keyFiles.push(...parsedKeyFiles);
-        self.keyFiles = sort_and_uniq(keyFiles);
-        key += `-${lockHash}`;
         self.cacheKey = key;
         self.cachePaths = [external_path_default().join(CARGO_HOME, "registry"), external_path_default().join(CARGO_HOME, "git")];
         if (self.cacheBin) {
