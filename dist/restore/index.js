@@ -140851,11 +140851,11 @@ __nccwpck_require__.d(common_utils_namespaceObject, {
 
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var lib_core = __nccwpck_require__(42186);
-// EXTERNAL MODULE: ./node_modules/@actions/io/lib/io.js
-var lib_io = __nccwpck_require__(47351);
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(57147);
 var external_fs_default = /*#__PURE__*/__nccwpck_require__.n(external_fs_);
+// EXTERNAL MODULE: ./node_modules/@actions/io/lib/io.js
+var lib_io = __nccwpck_require__(47351);
 // EXTERNAL MODULE: external "path"
 var external_path_ = __nccwpck_require__(71017);
 var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
@@ -142088,6 +142088,8 @@ async function utils_exists(path) {
 
 const SAVE_TARGETS = new Set(["lib", "proc-macro"]);
 class Workspace {
+    root;
+    target;
     constructor(root, target) {
         this.root = root;
         this.target = target;
@@ -142136,28 +142138,27 @@ const config_CARGO_HOME = process.env.CARGO_HOME || external_path_default().join
 const STATE_CONFIG = "RUST_CACHE_CONFIG";
 const HASH_LENGTH = 8;
 class CacheConfig {
-    constructor() {
-        /** All the paths we want to cache */
-        this.cachePaths = [];
-        /** The primary cache key */
-        this.cacheKey = "";
-        /** The secondary (restore) key that only contains the prefix and environment */
-        this.restoreKey = "";
-        /** Whether to cache CARGO_HOME/.bin */
-        this.cacheBin = true;
-        /** The workspace configurations */
-        this.workspaces = [];
-        /** The cargo binaries present during main step */
-        this.cargoBins = [];
-        /** The prefix portion of the cache key */
-        this.keyPrefix = "";
-        /** The rust version considered for the cache key */
-        this.keyRust = "";
-        /** The environment variables considered for the cache key */
-        this.keyEnvs = [];
-        /** The files considered for the cache key */
-        this.keyFiles = [];
-    }
+    /** All the paths we want to cache */
+    cachePaths = [];
+    /** The primary cache key */
+    cacheKey = "";
+    /** The secondary (restore) key that only contains the prefix and environment */
+    restoreKey = "";
+    /** Whether to cache CARGO_HOME/.bin */
+    cacheBin = true;
+    /** The workspace configurations */
+    workspaces = [];
+    /** The cargo binaries present during main step */
+    cargoBins = [];
+    /** The prefix portion of the cache key */
+    keyPrefix = "";
+    /** The rust version considered for the cache key */
+    keyRust = "";
+    /** The environment variables considered for the cache key */
+    keyEnvs = [];
+    /** The files considered for the cache key */
+    keyFiles = [];
+    constructor() { }
     /**
      * Constructs a [`CacheConfig`] with all the paths and keys.
      *
@@ -142628,12 +142629,12 @@ async function cleanRegistryIndexCache(dirName, keepPkg) {
                 await rm(dirName, dirent);
             }
             else {
-                dirIsEmpty && (dirIsEmpty = false);
+                dirIsEmpty &&= false;
             }
         }
         else {
             if (keepPkg.has(dirent.name)) {
-                dirIsEmpty && (dirIsEmpty = false);
+                dirIsEmpty &&= false;
             }
             else {
                 await rm(dirName, dirent);
@@ -149012,6 +149013,7 @@ const {
 
 
 
+
 process.on("uncaughtException", (e) => {
     lib_core.error(e.message);
     if (e.stack) {
@@ -149019,18 +149021,38 @@ process.on("uncaughtException", (e) => {
     }
 });
 async function validateSubscription() {
-    const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`;
+    const eventPath = process.env.GITHUB_EVENT_PATH;
+    let repoPrivate;
+    if (eventPath && external_fs_.existsSync(eventPath)) {
+        const eventData = JSON.parse(external_fs_.readFileSync(eventPath, 'utf8'));
+        repoPrivate = eventData?.repository?.private;
+    }
+    const upstream = 'Swatinem/rust-cache';
+    const action = process.env.GITHUB_ACTION_REPOSITORY;
+    const docsUrl = 'https://docs.stepsecurity.io/actions/stepsecurity-maintained-actions';
+    lib_core.info('');
+    lib_core.info('\u001b[1;36mStepSecurity Maintained Action\u001b[0m');
+    lib_core.info(`Secure drop-in replacement for ${upstream}`);
+    if (repoPrivate === false)
+        lib_core.info('\u001b[32m\u2713 Free for public repositories\u001b[0m');
+    lib_core.info(`\u001b[36mLearn more:\u001b[0m ${docsUrl}`);
+    lib_core.info('');
+    if (repoPrivate === false)
+        return;
+    const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
+    const body = { action: action || '' };
+    if (serverUrl !== 'https://github.com')
+        body.ghes_server = serverUrl;
     try {
-        await lib_axios.get(API_URL, { timeout: 3000 });
+        await lib_axios.post(`https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/maintained-actions-subscription`, body, { timeout: 3000 });
     }
     catch (error) {
         if (axios_isAxiosError(error) && error.response?.status === 403) {
-            lib_core.error('Subscription is not valid. Reach out to support@stepsecurity.io');
+            lib_core.error(`\u001b[1;31mThis action requires a StepSecurity subscription for private repositories.\u001b[0m`);
+            lib_core.error(`\u001b[31mLearn how to enable a subscription: ${docsUrl}\u001b[0m`);
             process.exit(1);
         }
-        else {
-            lib_core.info('Timeout or API not reachable. Continuing to next step.');
-        }
+        lib_core.info('Timeout or API not reachable. Continuing to next step.');
     }
 }
 async function run() {

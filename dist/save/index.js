@@ -142077,6 +142077,8 @@ async function exists(path) {
 
 const SAVE_TARGETS = new Set(["lib", "proc-macro"]);
 class Workspace {
+    root;
+    target;
     constructor(root, target) {
         this.root = root;
         this.target = target;
@@ -142125,28 +142127,27 @@ const CARGO_HOME = process.env.CARGO_HOME || external_path_default().join(HOME, 
 const STATE_CONFIG = "RUST_CACHE_CONFIG";
 const HASH_LENGTH = 8;
 class CacheConfig {
-    constructor() {
-        /** All the paths we want to cache */
-        this.cachePaths = [];
-        /** The primary cache key */
-        this.cacheKey = "";
-        /** The secondary (restore) key that only contains the prefix and environment */
-        this.restoreKey = "";
-        /** Whether to cache CARGO_HOME/.bin */
-        this.cacheBin = true;
-        /** The workspace configurations */
-        this.workspaces = [];
-        /** The cargo binaries present during main step */
-        this.cargoBins = [];
-        /** The prefix portion of the cache key */
-        this.keyPrefix = "";
-        /** The rust version considered for the cache key */
-        this.keyRust = "";
-        /** The environment variables considered for the cache key */
-        this.keyEnvs = [];
-        /** The files considered for the cache key */
-        this.keyFiles = [];
-    }
+    /** All the paths we want to cache */
+    cachePaths = [];
+    /** The primary cache key */
+    cacheKey = "";
+    /** The secondary (restore) key that only contains the prefix and environment */
+    restoreKey = "";
+    /** Whether to cache CARGO_HOME/.bin */
+    cacheBin = true;
+    /** The workspace configurations */
+    workspaces = [];
+    /** The cargo binaries present during main step */
+    cargoBins = [];
+    /** The prefix portion of the cache key */
+    keyPrefix = "";
+    /** The rust version considered for the cache key */
+    keyRust = "";
+    /** The environment variables considered for the cache key */
+    keyEnvs = [];
+    /** The files considered for the cache key */
+    keyFiles = [];
+    constructor() { }
     /**
      * Constructs a [`CacheConfig`] with all the paths and keys.
      *
@@ -142617,12 +142618,12 @@ async function cleanRegistryIndexCache(dirName, keepPkg) {
                 await rm(dirName, dirent);
             }
             else {
-                dirIsEmpty && (dirIsEmpty = false);
+                dirIsEmpty &&= false;
             }
         }
         else {
             if (keepPkg.has(dirent.name)) {
-                dirIsEmpty && (dirIsEmpty = false);
+                dirIsEmpty &&= false;
             }
             else {
                 await rm(dirName, dirent);
