@@ -47,3 +47,11 @@ reason = "It is a a test dependency"
 [[IgnoredVulns]]
 id = "RUSTSEC-2025-0047" 
 reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0098" 
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0099" 
+reason = "It is a a test dependency"
