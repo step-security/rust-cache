@@ -140881,6 +140881,8 @@ var external_crypto_default = /*#__PURE__*/__nccwpck_require__.n(external_crypto
 // EXTERNAL MODULE: external "fs/promises"
 var promises_ = __nccwpck_require__(73292);
 var promises_default = /*#__PURE__*/__nccwpck_require__.n(promises_);
+;// CONCATENATED MODULE: external "stream/promises"
+const external_stream_promises_namespaceObject = require("stream/promises");
 // EXTERNAL MODULE: external "os"
 var external_os_ = __nccwpck_require__(22037);
 var external_os_default = /*#__PURE__*/__nccwpck_require__.n(external_os_);
@@ -142037,11 +142039,12 @@ function reportError(e) {
         core.error(`${e.stack}`);
     }
 }
-async function getCmdOutput(cmd, args = [], options = {}) {
+async function getCmdOutput(cmdFormat, cmd, options = {}) {
+    cmd = cmdFormat.replace("{0}", cmd);
     let stdout = "";
     let stderr = "";
     try {
-        await exec.exec(cmd, args, {
+        await exec.exec(cmd, [], {
             silent: true,
             listeners: {
                 stdout(data) {
@@ -142056,7 +142059,7 @@ async function getCmdOutput(cmd, args = [], options = {}) {
     }
     catch (e) {
         e.commandFailed = {
-            command: `${cmd} ${args.join(" ")}`,
+            command: cmd,
             stderr,
         };
         throw e;
@@ -142106,11 +142109,12 @@ class Workspace {
         this.root = root;
         this.target = target;
     }
-    async getPackages(filter, ...extraArgs) {
+    async getPackages(cmdFormat, filter, extraArgs) {
+        const cmd = "cargo metadata --all-features --format-version 1" + (extraArgs ? ` ${extraArgs}` : "");
         let packages = [];
         try {
             core.debug(`collecting metadata for "${this.root}"`);
-            const meta = JSON.parse(await getCmdOutput("cargo", ["metadata", "--all-features", "--format-version", "1", ...extraArgs], {
+            const meta = JSON.parse(await getCmdOutput(cmdFormat, cmd, {
                 cwd: this.root,
                 env: { ...process.env, "CARGO_ENCODED_RUSTFLAGS": "" },
             }));
@@ -142125,15 +142129,16 @@ class Workspace {
         }
         return packages;
     }
-    async getPackagesOutsideWorkspaceRoot() {
-        return await this.getPackages((pkg) => !pkg.manifest_path.startsWith(this.root));
+    async getPackagesOutsideWorkspaceRoot(cmdFormat) {
+        return await this.getPackages(cmdFormat, (pkg) => !pkg.manifest_path.startsWith(this.root));
     }
-    async getWorkspaceMembers() {
-        return await this.getPackages((_) => true, "--no-deps");
+    async getWorkspaceMembers(cmdFormat) {
+        return await this.getPackages(cmdFormat, (_) => true, "--no-deps");
     }
 }
 
 ;// CONCATENATED MODULE: ./src/config.ts
+
 
 
 
@@ -142150,6 +142155,8 @@ const CARGO_HOME = process.env.CARGO_HOME || external_path_default().join(HOME, 
 const STATE_CONFIG = "RUST_CACHE_CONFIG";
 const HASH_LENGTH = 8;
 class CacheConfig {
+    /** A format string for running commands */
+    cmdFormat = "";
     /** All the paths we want to cache */
     cachePaths = [];
     /** The primary cache key */
@@ -142165,7 +142172,7 @@ class CacheConfig {
     /** The prefix portion of the cache key */
     keyPrefix = "";
     /** The rust version considered for the cache key */
-    keyRust = "";
+    keyRust = [];
     /** The environment variables considered for the cache key */
     keyEnvs = [];
     /** The files considered for the cache key */
@@ -142178,6 +142185,17 @@ class CacheConfig {
      */
     static async new() {
         const self = new CacheConfig();
+        let cmdFormat = core.getInput("cmd-format");
+        if (cmdFormat) {
+            const placeholderMatches = cmdFormat.match(/\{0\}/g);
+            if (!placeholderMatches || placeholderMatches.length !== 1) {
+                cmdFormat = "{0}";
+            }
+        }
+        else {
+            cmdFormat = "{0}";
+        }
+        self.cmdFormat = cmdFormat;
         // Construct key prefix:
         // This uses either the `shared-key` input,
         // or the `key` input combined with the `job` key.
@@ -142208,12 +142226,15 @@ class CacheConfig {
         // The env vars are sorted, matched by prefix and hashed into the
         // resulting environment hash.
         let hasher = external_crypto_default().createHash("sha1");
-        const rustVersion = await getRustVersion();
-        let keyRust = `${rustVersion.release} ${rustVersion.host}`;
-        hasher.update(keyRust);
-        hasher.update(rustVersion["commit-hash"]);
-        keyRust += ` (${rustVersion["commit-hash"]})`;
-        self.keyRust = keyRust;
+        const rustVersions = Array.from(await getRustVersions(cmdFormat));
+        // Doesn't matter how they're sorted, just as long as it's deterministic.
+        rustVersions.sort();
+        for (const rustVersion of rustVersions) {
+            const { release, host, "commit-hash": commitHash } = rustVersion;
+            const keyRust = `${release} ${host} ${commitHash}`;
+            hasher.update(keyRust);
+            self.keyRust.push(keyRust);
+        }
         // these prefixes should cover most of the compiler / rust / cargo keys
         const envPrefixes = ["CARGO", "CC", "CFLAGS", "CXX", "CMAKE", "RUST"];
         envPrefixes.push(...core.getInput("env-vars").split(/\s+/).filter(Boolean));
@@ -142258,7 +142279,7 @@ class CacheConfig {
             for (const workspace of workspaces) {
                 const root = workspace.root;
                 keyFiles.push(...(await globFiles(`${root}/**/.cargo/config.toml\n${root}/**/rust-toolchain\n${root}/**/rust-toolchain.toml`)));
-                const workspaceMembers = await workspace.getWorkspaceMembers();
+                const workspaceMembers = await workspace.getWorkspaceMembers(cmdFormat);
                 const cargo_manifests = sort_and_uniq(workspaceMembers.map((member) => external_path_default().join(member.path, "Cargo.toml")));
                 for (const cargo_manifest of cargo_manifests) {
                     try {
@@ -142328,9 +142349,7 @@ class CacheConfig {
             }
             keyFiles = sort_and_uniq(keyFiles);
             for (const file of keyFiles) {
-                for await (const chunk of external_fs_default().createReadStream(file)) {
-                    hasher.update(chunk);
-                }
+                await (0,external_stream_promises_namespaceObject.pipeline)((0,external_fs_.createReadStream)(file), hasher);
             }
             keyFiles.push(...parsedKeyFiles);
             self.keyFiles = sort_and_uniq(keyFiles);
@@ -142399,7 +142418,10 @@ class CacheConfig {
         core.info(`.. Prefix:`);
         core.info(`  - ${this.keyPrefix}`);
         core.info(`.. Environment considered:`);
-        core.info(`  - Rust Version: ${this.keyRust}`);
+        core.info(`  - Rust Versions:`);
+        for (const rust of this.keyRust) {
+            core.info(`    - ${rust}`);
+        }
         for (const env of this.keyEnvs) {
             core.info(`  - ${env}`);
         }
@@ -142434,9 +142456,31 @@ function isCacheUpToDate() {
 function digest(hasher) {
     return hasher.digest("hex").substring(0, HASH_LENGTH);
 }
-async function getRustVersion() {
-    const stdout = await getCmdOutput("rustc", ["-vV"]);
-    let splits = stdout
+async function getRustVersions(cmdFormat) {
+    const versions = new Set();
+    versions.add(parseRustVersion(await getCmdOutput(cmdFormat, "rustc -vV")));
+    const stdout = await (async () => {
+        try {
+            return await getCmdOutput(cmdFormat, "rustup toolchain list --quiet");
+        }
+        catch (e) {
+            core.warning(`Error running rustup toolchain list, falling back to default toolchain only: ${e}`);
+            return undefined;
+        }
+    })();
+    if (stdout !== undefined) {
+        for (const toolchain of stdout.split(/[\n\r]+/)) {
+            const trimmed = toolchain.trim();
+            if (!trimmed) {
+                continue;
+            }
+            versions.add(parseRustVersion(await getCmdOutput(cmdFormat, `rustup run ${toolchain} rustc -vV`)));
+        }
+    }
+    return versions;
+}
+function parseRustVersion(stdout) {
+    const splits = stdout
         .split(/[\n\r]+/)
         .filter(Boolean)
         .map((s) => s.split(":").map((s) => s.trim()))
@@ -142447,10 +142491,17 @@ async function globFiles(pattern) {
     const globber = await glob.create(pattern, {
         followSymbolicLinks: false,
     });
-    // fs.statSync resolve the symbolic link and returns stat for the
+    // fs.stat resolve the symbolic link and returns stat for the
     // file it pointed to, so isFile would make sure the resolved
     // file is actually a regular file.
-    return (await globber.glob()).filter((file) => external_fs_default().statSync(file).isFile());
+    const files = [];
+    for (const file of await globber.glob()) {
+        const stats = await promises_default().stat(file);
+        if (stats.isFile()) {
+            files.push(file);
+        }
+    }
+    return files;
 }
 function sort_and_uniq(a) {
     return a
@@ -142791,9 +142842,9 @@ async function run() {
         const workspaceCrates = core.getInput("cache-workspace-crates").toLowerCase() || "false";
         const allPackages = [];
         for (const workspace of config.workspaces) {
-            const packages = await workspace.getPackagesOutsideWorkspaceRoot();
+            const packages = await workspace.getPackagesOutsideWorkspaceRoot(config.cmdFormat);
             if (workspaceCrates === "true") {
-                const wsMembers = await workspace.getWorkspaceMembers();
+                const wsMembers = await workspace.getWorkspaceMembers(config.cmdFormat);
                 packages.push(...wsMembers);
             }
             allPackages.push(...packages);
