@@ -1,0 +1,33 @@
+name: nix
+
+on: [push, pull_request]
+
+permissions: {}
+
+jobs:
+  nix:
+    if: github.repository == 'step-security/rust-cache'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "macos-latest"]') }}
+
+    name: Test Nix on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - uses: cachix/install-nix-action@1ca7d21a94afc7c957383a2d217460d980de4934 # v31.10.1
+
+      - uses: ./
+        with:
+          workspaces: tests
+          cmd-format: nix develop ./tests -c {0}
+
+      - run: |
+          nix develop -c cargo check
+          nix develop -c cargo test
+        working-directory: tests
