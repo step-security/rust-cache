@@ -101,6 +101,16 @@ sensible defaults.
     # Determines whether to cache the ~/.cargo/bin directory.
     # default: "true"
     cache-bin: ""
+
+    # A format string used to format commands to be run, i.e. `rustc` and `cargo`.
+    # Must contain exactly one occurance of `{0}`, which is the formatting fragment
+    # that will be replaced with the `rustc` or `cargo` command. This is necessary
+    # when using Nix or other setup that requires running these commands within a
+    # specific shell, otherwise the system `rustc` and `cargo` will be run.
+    # default: "{0}"
+    cmd-format: ""
+    # To run within a Nix shell (using the default dev shell of a flake in the repo root):
+    cmd-format: nix develop -c {0}
 ```
 
 Further examples are available in the [.github/workflows](./.github/workflows/) directory.
@@ -135,7 +145,8 @@ This cache is automatically keyed by:
 
 - the github [`job_id`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_id)
 (if `add-job-id-key` is `"true"`),
-- the rustc release / host / hash,
+- the rustc release / host / hash (for all installed toolchains when
+  available),
 - the following values, if `add-rust-environment-hash-key` is `"true"`:
   - the value of some compiler-specific environment variables (eg. RUSTFLAGS, etc), and
   - a hash of all `Cargo.lock` / `Cargo.toml` files found anywhere in the repository (if present).
