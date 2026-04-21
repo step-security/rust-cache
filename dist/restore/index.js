@@ -203780,8 +203780,6 @@ function glob_hashFiles(patterns_1) {
 // EXTERNAL MODULE: external "fs/promises"
 var promises_ = __nccwpck_require__(73292);
 var promises_default = /*#__PURE__*/__nccwpck_require__.n(promises_);
-;// CONCATENATED MODULE: external "stream/promises"
-const external_stream_promises_namespaceObject = require("stream/promises");
 ;// CONCATENATED MODULE: ./node_modules/smol-toml/dist/error.js
 /*!
  * Copyright (c) Squirrel Chat et al., All rights reserved.
@@ -249078,7 +249076,6 @@ class Workspace {
 
 
 
-
 const HOME = external_os_default().homedir();
 const config_CARGO_HOME = process.env.CARGO_HOME || external_path_default().join(HOME, ".cargo");
 const STATE_CONFIG = "RUST_CACHE_CONFIG";
@@ -249139,7 +249136,7 @@ class CacheConfig {
                 key += `-${inputKey}`;
             }
             const job = process.env.GITHUB_JOB;
-            if ((job) && getInput("add-job-id-key").toLowerCase() == "true") {
+            if (job && getInput("add-job-id-key").toLowerCase() == "true") {
                 key += `-${job}`;
             }
         }
@@ -249278,7 +249275,9 @@ class CacheConfig {
             }
             keyFiles = sort_and_uniq(keyFiles);
             for (const file of keyFiles) {
-                await (0,external_stream_promises_namespaceObject.pipeline)((0,external_fs_.createReadStream)(file), hasher);
+                for await (const chunk of (0,external_fs_.createReadStream)(file)) {
+                    hasher.update(chunk);
+                }
             }
             keyFiles.push(...parsedKeyFiles);
             self.keyFiles = sort_and_uniq(keyFiles);
