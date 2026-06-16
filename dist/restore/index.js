@@ -70316,652 +70316,6 @@ exports.callbackifyAll = callbackifyAll;
 
 /***/ }),
 
-/***/ 44458:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-Object.defineProperty(exports, "v1", ({
-  enumerable: true,
-  get: function () {
-    return _v.default;
-  }
-}));
-Object.defineProperty(exports, "v3", ({
-  enumerable: true,
-  get: function () {
-    return _v2.default;
-  }
-}));
-Object.defineProperty(exports, "v4", ({
-  enumerable: true,
-  get: function () {
-    return _v3.default;
-  }
-}));
-Object.defineProperty(exports, "v5", ({
-  enumerable: true,
-  get: function () {
-    return _v4.default;
-  }
-}));
-Object.defineProperty(exports, "NIL", ({
-  enumerable: true,
-  get: function () {
-    return _nil.default;
-  }
-}));
-Object.defineProperty(exports, "version", ({
-  enumerable: true,
-  get: function () {
-    return _version.default;
-  }
-}));
-Object.defineProperty(exports, "validate", ({
-  enumerable: true,
-  get: function () {
-    return _validate.default;
-  }
-}));
-Object.defineProperty(exports, "stringify", ({
-  enumerable: true,
-  get: function () {
-    return _stringify.default;
-  }
-}));
-Object.defineProperty(exports, "parse", ({
-  enumerable: true,
-  get: function () {
-    return _parse.default;
-  }
-}));
-
-var _v = _interopRequireDefault(__nccwpck_require__(33542));
-
-var _v2 = _interopRequireDefault(__nccwpck_require__(29411));
-
-var _v3 = _interopRequireDefault(__nccwpck_require__(83424));
-
-var _v4 = _interopRequireDefault(__nccwpck_require__(64051));
-
-var _nil = _interopRequireDefault(__nccwpck_require__(46570));
-
-var _version = _interopRequireDefault(__nccwpck_require__(35611));
-
-var _validate = _interopRequireDefault(__nccwpck_require__(20937));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(32122));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(99645));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-
-/***/ 84953:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('md5').update(bytes).digest();
-}
-
-var _default = md5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 46570:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = '00000000-0000-0000-0000-000000000000';
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 99645:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(20937));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function parse(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  let v;
-  const arr = new Uint8Array(16); // Parse ########-....-....-....-............
-
-  arr[0] = (v = parseInt(uuid.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 0xff;
-  arr[2] = v >>> 8 & 0xff;
-  arr[3] = v & 0xff; // Parse ........-####-....-....-............
-
-  arr[4] = (v = parseInt(uuid.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 0xff; // Parse ........-....-####-....-............
-
-  arr[6] = (v = parseInt(uuid.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 0xff; // Parse ........-....-....-####-............
-
-  arr[8] = (v = parseInt(uuid.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 0xff; // Parse ........-....-....-....-############
-  // (Use "/" to avoid 32-bit truncation when bit-shifting high-order bytes)
-
-  arr[10] = (v = parseInt(uuid.slice(24, 36), 16)) / 0x10000000000 & 0xff;
-  arr[11] = v / 0x100000000 & 0xff;
-  arr[12] = v >>> 24 & 0xff;
-  arr[13] = v >>> 16 & 0xff;
-  arr[14] = v >>> 8 & 0xff;
-  arr[15] = v & 0xff;
-  return arr;
-}
-
-var _default = parse;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 94323:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 91430:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = rng;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rnds8Pool = new Uint8Array(256); // # of random values to pre-allocate
-
-let poolPtr = rnds8Pool.length;
-
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    _crypto.default.randomFillSync(rnds8Pool);
-
-    poolPtr = 0;
-  }
-
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-/***/ }),
-
-/***/ 77416:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('sha1').update(bytes).digest();
-}
-
-var _default = sha1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 32122:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(20937));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-const byteToHex = [];
-
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).substr(1));
-}
-
-function stringify(arr, offset = 0) {
-  // Note: Be careful editing this code!  It's been tuned for performance
-  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-  const uuid = (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase(); // Consistency check for valid UUID.  If this throws, it's likely due to one
-  // of the following:
-  // - One or more input array values don't map to a hex octet (leading to
-  // "undefined" in the uuid)
-  // - Invalid input values for the RFC `version` or `variant` fields
-
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Stringified UUID is invalid');
-  }
-
-  return uuid;
-}
-
-var _default = stringify;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 33542:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(91430));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(32122));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// **`v1()` - Generate time-based UUID**
-//
-// Inspired by https://github.com/LiosK/UUID.js
-// and http://docs.python.org/library/uuid.html
-let _nodeId;
-
-let _clockseq; // Previous uuid creation time
-
-
-let _lastMSecs = 0;
-let _lastNSecs = 0; // See https://github.com/uuidjs/uuid for API details
-
-function v1(options, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options = options || {};
-  let node = options.node || _nodeId;
-  let clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq; // node and clockseq need to be initialized to random values if they're not
-  // specified.  We do this lazily to minimize issues related to insufficient
-  // system entropy.  See #189
-
-  if (node == null || clockseq == null) {
-    const seedBytes = options.random || (options.rng || _rng.default)();
-
-    if (node == null) {
-      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-      node = _nodeId = [seedBytes[0] | 0x01, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-
-    if (clockseq == null) {
-      // Per 4.2.2, randomize (14 bit) clockseq
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
-    }
-  } // UUID timestamps are 100 nano-second units since the Gregorian epoch,
-  // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
-  // time is handled internally as 'msecs' (integer milliseconds) and 'nsecs'
-  // (100-nanoseconds offset from msecs) since unix epoch, 1970-01-01 00:00.
-
-
-  let msecs = options.msecs !== undefined ? options.msecs : Date.now(); // Per 4.2.1.2, use count of uuid's generated during the current clock
-  // cycle to simulate higher resolution clock
-
-  let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1; // Time since last uuid creation (in msecs)
-
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 10000; // Per 4.2.1.2, Bump clockseq on clock regression
-
-  if (dt < 0 && options.clockseq === undefined) {
-    clockseq = clockseq + 1 & 0x3fff;
-  } // Reset nsecs if clock regresses (new clockseq) or we've moved onto a new
-  // time interval
-
-
-  if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-    nsecs = 0;
-  } // Per 4.2.1.2 Throw error if too many uuids are requested
-
-
-  if (nsecs >= 10000) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq; // Per 4.1.4 - Convert from unix epoch to Gregorian epoch
-
-  msecs += 12219292800000; // `time_low`
-
-  const tl = ((msecs & 0xfffffff) * 10000 + nsecs) % 0x100000000;
-  b[i++] = tl >>> 24 & 0xff;
-  b[i++] = tl >>> 16 & 0xff;
-  b[i++] = tl >>> 8 & 0xff;
-  b[i++] = tl & 0xff; // `time_mid`
-
-  const tmh = msecs / 0x100000000 * 10000 & 0xfffffff;
-  b[i++] = tmh >>> 8 & 0xff;
-  b[i++] = tmh & 0xff; // `time_high_and_version`
-
-  b[i++] = tmh >>> 24 & 0xf | 0x10; // include version
-
-  b[i++] = tmh >>> 16 & 0xff; // `clock_seq_hi_and_reserved` (Per 4.2.2 - include variant)
-
-  b[i++] = clockseq >>> 8 | 0x80; // `clock_seq_low`
-
-  b[i++] = clockseq & 0xff; // `node`
-
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-
-  return buf || (0, _stringify.default)(b);
-}
-
-var _default = v1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 29411:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(74624));
-
-var _md = _interopRequireDefault(__nccwpck_require__(84953));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v3 = (0, _v.default)('v3', 0x30, _md.default);
-var _default = v3;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 74624:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = _default;
-exports.URL = exports.DNS = void 0;
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(32122));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(99645));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function stringToBytes(str) {
-  str = unescape(encodeURIComponent(str)); // UTF8 escape
-
-  const bytes = [];
-
-  for (let i = 0; i < str.length; ++i) {
-    bytes.push(str.charCodeAt(i));
-  }
-
-  return bytes;
-}
-
-const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-exports.DNS = DNS;
-const URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-exports.URL = URL;
-
-function _default(name, version, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    if (typeof value === 'string') {
-      value = stringToBytes(value);
-    }
-
-    if (typeof namespace === 'string') {
-      namespace = (0, _parse.default)(namespace);
-    }
-
-    if (namespace.length !== 16) {
-      throw TypeError('Namespace must be array-like (16 iterable integer values, 0-255)');
-    } // Compute hash of namespace and value, Per 4.3
-    // Future: Use spread syntax when supported on all platforms, e.g. `bytes =
-    // hashfunc([...namespace, ... value])`
-
-
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 0x0f | version;
-    bytes[8] = bytes[8] & 0x3f | 0x80;
-
-    if (buf) {
-      offset = offset || 0;
-
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-
-      return buf;
-    }
-
-    return (0, _stringify.default)(bytes);
-  } // Function#name is not settable on some platforms (#270)
-
-
-  try {
-    generateUUID.name = name; // eslint-disable-next-line no-empty
-  } catch (err) {} // For CommonJS default export support
-
-
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL;
-  return generateUUID;
-}
-
-/***/ }),
-
-/***/ 83424:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(91430));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(32122));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function v4(options, buf, offset) {
-  options = options || {};
-
-  const rnds = options.random || (options.rng || _rng.default)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
-
-  rnds[6] = rnds[6] & 0x0f | 0x40;
-  rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
-  if (buf) {
-    offset = offset || 0;
-
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-
-    return buf;
-  }
-
-  return (0, _stringify.default)(rnds);
-}
-
-var _default = v4;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 64051:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(74624));
-
-var _sha = _interopRequireDefault(__nccwpck_require__(77416));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v5 = (0, _v.default)('v5', 0x50, _sha.default);
-var _default = v5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 20937:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _regex = _interopRequireDefault(__nccwpck_require__(94323));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function validate(uuid) {
-  return typeof uuid === 'string' && _regex.default.test(uuid);
-}
-
-var _default = validate;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 35611:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(20937));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function version(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  return parseInt(uuid.substr(14, 1), 16);
-}
-
-var _default = version;
-exports["default"] = _default;
-
-/***/ }),
-
 /***/ 40334:
 /***/ ((module) => {
 
@@ -177063,6 +176417,25 @@ class Bucket extends index_js_1.ServiceObject {
              * }, function(err, apiResponse) {});
              *
              * //-
+             * // Enforce CMEK-only encryption for new objects.
+             * // This blocks Google-Managed and Customer-Supplied keys.
+             * //-
+             * bucket.setMetadata({
+             *   encryption: {
+             *     defaultKmsKeyName: 'projects/grape-spaceship-123/...',
+             *     googleManagedEncryptionEnforcementConfig: {
+             *       restrictionMode: 'FullyRestricted'
+             *     },
+             *     customerSuppliedEncryptionEnforcementConfig: {
+             *       restrictionMode: 'FullyRestricted'
+             *     },
+             *     customerManagedEncryptionEnforcementConfig: {
+             *       restrictionMode: 'NotRestricted'
+             *     }
+             *   }
+             * }, function(err, apiResponse) {});
+             *
+             * //-
              * // Set the default event-based hold value for new objects in this
              * // bucket.
              * //-
@@ -177441,6 +176814,11 @@ class Bucket extends index_js_1.ServiceObject {
         else if (optionsOrCallback) {
             options = optionsOrCallback;
         }
+        if (options.contexts) {
+            const validationError = (0, util_js_1.handleContextValidation)(options.contexts, callback);
+            if (validationError)
+                return validationError;
+        }
         this.disableAutoRetryConditionallyIdempotent_(this.methods.setMetadata, // Not relevant but param is required
         AvailableServiceObjectMethods.setMetadata, // Same as above
         options);
@@ -177482,6 +176860,7 @@ class Bucket extends index_js_1.ServiceObject {
                 destination: {
                     contentType: destinationFile.metadata.contentType,
                     contentEncoding: destinationFile.metadata.contentEncoding,
+                    contexts: options.contexts || destinationFile.metadata.contexts,
                 },
                 sourceObjects: sources.map(source => {
                     const sourceObject = {
@@ -178284,6 +177663,10 @@ class Bucket extends index_js_1.ServiceObject {
      * in addition to the relevant part of the object name appearing in prefixes[].
      * @property {string} [prefix] Filter results to objects whose names begin
      *     with this prefix.
+     * @property {string} [filter] Filter results using a server-side filter
+     * expression. This is primarily used for filtering by Object Contexts.
+     * Syntax: `contexts."<key>"="<value>"` or `contexts."<key>":*`.
+     * Prepend `-` for negation (e.g., `-contexts."key":*`).
      * @property {string} [matchGlob] A glob pattern used to filter results,
      *     for example foo*bar
      * @property {number} [maxApiCalls] Maximum number of API calls to make.
@@ -178331,6 +177714,9 @@ class Bucket extends index_js_1.ServiceObject {
      * in addition to the relevant part of the object name appearing in prefixes[].
      * @param {string} [query.prefix] Filter results to objects whose names begin
      *     with this prefix.
+     * @param {string} [query.filter] Filter results using a server-side filter
+     *     expression. Supports Object Contexts with operators like `=`, `:`,
+     *     and `-` for negation.
      * @param {number} [query.maxApiCalls] Maximum number of API calls to make.
      * @param {number} [query.maxResults] Maximum number of items plus prefixes to
      *     return per call.
@@ -178350,6 +177736,7 @@ class Bucket extends index_js_1.ServiceObject {
      *     billed for the request.
      * @param {boolean} [query.versions] If true, returns File objects scoped to
      *     their versions.
+     *
      * @param {GetFilesCallback} [callback] Callback function.
      * @returns {Promise<GetFilesResponse>}
      *
@@ -178440,6 +177827,31 @@ class Bucket extends index_js_1.ServiceObject {
      *   // apiResponse.prefixes = [
      *   //   'a/b/'
      *   // ]
+     * });
+     * ```
+     *
+     * @example
+     * //-
+     * // Filter files using Object Contexts.
+     * //-
+     * ```
+     * const query = {
+     *    filter: 'contexts."status"="active"'
+     * };
+     * bucket.getFiles(query, function(err, files) {
+     *    if (!err) {
+     *      // files only contains objects with the 'status' context set to 'active'.
+     *    }
+     * });
+     *
+     * //-
+     * // You can also filter by the absence of a context key.
+     * //-
+     *
+     * bucket.getFiles({
+     *    filter: '-contexts."priority":*'
+     * }, function(err, files) {
+     *     // files contains objects that DO NOT have the 'priority' context key.
      * });
      * ```
      *
@@ -180366,7 +179778,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 var _File_instances, _File_validateIntegrity;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.File = exports.FileExceptionMessages = exports.RequestError = exports.STORAGE_POST_POLICY_BASE_URL = exports.ActionToHTTPMethod = void 0;
+exports.File = exports.FileExceptionMessages = exports.RequestError = exports.SkipReason = exports.STORAGE_POST_POLICY_BASE_URL = exports.ActionToHTTPMethod = void 0;
 const index_js_1 = __nccwpck_require__(4052);
 const promisify_1 = __nccwpck_require__(19203);
 const crypto = __importStar(__nccwpck_require__(6113));
@@ -180417,6 +179829,13 @@ const COMPRESSIBLE_MIME_REGEX = new RegExp([
 ]
     .map(r => r.source)
     .join(''), 'i');
+var SkipReason;
+(function (SkipReason) {
+    SkipReason["PATH_TRAVERSAL"] = "PATH_TRAVERSAL";
+    SkipReason["ILLEGAL_CHARACTER"] = "ILLEGAL_CHARACTER";
+    SkipReason["ALREADY_EXISTS"] = "ALREADY_EXISTS";
+    SkipReason["DOWNLOAD_ERROR"] = "DOWNLOAD_ERROR";
+})(SkipReason || (exports.SkipReason = SkipReason = {}));
 class RequestError extends Error {
 }
 exports.RequestError = RequestError;
@@ -181122,6 +180541,11 @@ class File extends index_js_1.ServiceObject {
         }
         else if (optionsOrCallback) {
             options = { ...optionsOrCallback };
+        }
+        if (options.contexts) {
+            const validationError = (0, util_js_2.handleContextValidation)(options.contexts, callback);
+            if (validationError)
+                return validationError;
         }
         callback = callback || index_js_1.util.noop;
         let destBucket;
@@ -182494,7 +181918,11 @@ class File extends index_js_1.ServiceObject {
                 fields['policy'] = policyBase64;
                 fields['x-goog-signature'] = signatureHex;
                 let url;
-                if (this.storage.customEndpoint) {
+                const EMULATOR_HOST = process.env.STORAGE_EMULATOR_HOST;
+                if (this.storage.customEndpoint && typeof EMULATOR_HOST === 'string') {
+                    url = `${this.storage.apiEndpoint}/${this.bucket.name}`;
+                }
+                else if (this.storage.customEndpoint) {
                     url = this.storage.apiEndpoint;
                 }
                 else if (options.virtualHostedStyle) {
@@ -183515,10 +182943,13 @@ class File extends index_js_1.ServiceObject {
      * ```
      */
     save(data, optionsOrCallback, callback) {
-        // tslint:enable:no-any
+        var _a;
         callback =
             typeof optionsOrCallback === 'function' ? optionsOrCallback : callback;
         const options = typeof optionsOrCallback === 'object' ? optionsOrCallback : {};
+        const validationError = (0, util_js_2.handleContextValidation)((_a = options.metadata) === null || _a === void 0 ? void 0 : _a.contexts, callback);
+        if (validationError)
+            return validationError;
         let maxRetries = this.storage.retryOptions.maxRetries;
         if (!this.shouldRetryBasedOnPreconditionAndIdempotencyStrat(options === null || options === void 0 ? void 0 : options.preconditionOpts)) {
             maxRetries = 0;
@@ -183589,6 +183020,9 @@ class File extends index_js_1.ServiceObject {
             typeof optionsOrCallback === 'function'
                 ? optionsOrCallback
                 : cb;
+        const validationError = (0, util_js_2.handleContextValidation)(metadata.contexts, cb);
+        if (validationError)
+            return validationError;
         this.disableAutoRetryConditionallyIdempotent_(this.methods.setMetadata, bucket_js_1.AvailableServiceObjectMethods.setMetadata, options);
         super
             .setMetadata(metadata, options)
@@ -185184,7 +184618,7 @@ exports.Service = exports.DEFAULT_PROJECT_ID_TOKEN = void 0;
  * limitations under the License.
  */
 const google_auth_library_1 = __nccwpck_require__(20810);
-const uuid = __importStar(__nccwpck_require__(44458));
+const crypto = __importStar(__nccwpck_require__(6113));
 const util_js_1 = __nccwpck_require__(38064);
 const util_js_2 = __nccwpck_require__(59258);
 exports.DEFAULT_PROJECT_ID_TOKEN = '{{projectId}}';
@@ -185316,7 +184750,7 @@ class Service {
         reqOpts.headers = {
             ...reqOpts.headers,
             'User-Agent': userAgent,
-            'x-goog-api-client': `${(0, util_js_2.getRuntimeTrackingString)()} gccl/${pkg.version}-${(0, util_js_2.getModuleFormat)()} gccl-invocation-id/${uuid.v4()}`,
+            'x-goog-api-client': `${(0, util_js_2.getRuntimeTrackingString)()} gccl/${pkg.version}-${(0, util_js_2.getModuleFormat)()} gccl-invocation-id/${crypto.randomUUID()}`,
         };
         if (reqOpts[util_js_1.GCCL_GCS_CMD_KEY]) {
             reqOpts.headers['x-goog-api-client'] +=
@@ -185422,7 +184856,7 @@ const google_auth_library_1 = __nccwpck_require__(20810);
 const retry_request_1 = __importDefault(__nccwpck_require__(63515));
 const stream_1 = __nccwpck_require__(12781);
 const teeny_request_1 = __nccwpck_require__(6886);
-const uuid = __importStar(__nccwpck_require__(44458));
+const crypto = __importStar(__nccwpck_require__(6113));
 const service_js_1 = __nccwpck_require__(17370);
 const util_js_1 = __nccwpck_require__(59258);
 const duplexify_1 = __importDefault(__nccwpck_require__(76599));
@@ -186042,7 +185476,7 @@ class Util {
     _getDefaultHeaders(gcclGcsCmd) {
         const headers = {
             'User-Agent': (0, util_js_1.getUserAgentString)(),
-            'x-goog-api-client': `${(0, util_js_1.getRuntimeTrackingString)()} gccl/${packageJson.version}-${(0, util_js_1.getModuleFormat)()} gccl-invocation-id/${uuid.v4()}`,
+            'x-goog-api-client': `${(0, util_js_1.getRuntimeTrackingString)()} gccl/${packageJson.version}-${(0, util_js_1.getModuleFormat)()} gccl-invocation-id/${crypto.randomUUID()}`,
         };
         if (gcclGcsCmd) {
             headers['x-goog-api-client'] += ` gccl-gcs-cmd/${gcclGcsCmd}`;
@@ -186424,7 +185858,7 @@ const gaxios = __importStar(__nccwpck_require__(59555));
 const google_auth_library_1 = __nccwpck_require__(20810);
 const stream_1 = __nccwpck_require__(12781);
 const async_retry_1 = __importDefault(__nccwpck_require__(33415));
-const uuid = __importStar(__nccwpck_require__(44458));
+const crypto = __importStar(__nccwpck_require__(6113));
 const util_js_1 = __nccwpck_require__(59258);
 const util_js_2 = __nccwpck_require__(38064);
 const file_js_1 = __nccwpck_require__(4713);
@@ -186444,9 +185878,9 @@ class Upload extends stream_1.Writable {
         this.numBytesWritten = 0;
         this.numRetries = 0;
         this.currentInvocationId = {
-            checkUploadStatus: uuid.v4(),
-            chunk: uuid.v4(),
-            uri: uuid.v4(),
+            checkUploadStatus: crypto.randomUUID(),
+            chunk: crypto.randomUUID(),
+            uri: crypto.randomUUID(),
         };
         /**
          * A cache of buffers written to this instance, ready for consuming
@@ -186813,7 +186247,7 @@ class Upload extends stream_1.Writable {
             try {
                 const res = await this.makeRequest(reqOpts);
                 // We have successfully got a URI we can now create a new invocation id
-                this.currentInvocationId.uri = uuid.v4();
+                this.currentInvocationId.uri = crypto.randomUUID();
                 return res.headers.location;
             }
             catch (err) {
@@ -187009,7 +186443,7 @@ class Upload extends stream_1.Writable {
             return;
         }
         // At this point we can safely create a new id for the chunk
-        this.currentInvocationId.chunk = uuid.v4();
+        this.currentInvocationId.chunk = crypto.randomUUID();
         const moreDataToUpload = await this.waitForNextChunk();
         const shouldContinueWithNextMultiChunkRequest = this.chunkSize &&
             resp.status === RESUMABLE_INCOMPLETE_STATUS_CODE &&
@@ -187108,7 +186542,7 @@ class Upload extends stream_1.Writable {
         try {
             const resp = await this.makeRequest(opts);
             // Successfully got the offset we can now create a new offset invocation id
-            this.currentInvocationId.checkUploadStatus = uuid.v4();
+            this.currentInvocationId.checkUploadStatus = crypto.randomUUID();
             return resp;
         }
         catch (e) {
@@ -189085,6 +188519,11 @@ class XMLMultiPartUploadHelper {
                 'Content-MD5': hash,
             };
         }
+        else if (validation === 'crc32c') {
+            const crc = new crc32c_js_1.CRC32C();
+            crc.update(chunk);
+            headers['x-goog-hash'] = `crc32c=${crc.toString()}`;
+        }
         return (0, async_retry_1.default)(async (bail) => {
             try {
                 const res = await this.authClient.request({
@@ -189315,6 +188754,34 @@ class TransferManager {
      * instead of being returned as a buffer.
      * @returns {Promise<DownloadResponse[]>}
      *
+     * @behavior
+     * **Return shape change (breaking/observable behavior):**
+     * - Previously, the returned array only contained entries for files that were successfully downloaded.
+     * - This meant the response length could be smaller than the number of requested input files.
+     * - Now, the returned array always has the same length and ordering as the input file list.
+     * - Each index in the response corresponds directly to the same index in the input.
+     * - Files that are skipped or fail will still have an entry in the result with:
+     *   - `skipped = true`
+     *   - `reason` populated with a {@link SkipReason}
+     *
+     * **New guarantees:**
+     * - Response length === number of requested files
+     * - Stable positional mapping between input and output
+     * - All outcomes (success, skipped, error) are explicitly represented
+     *
+     * @security
+     * **Path traversal protection (new):**
+     * - File paths are resolved relative to the configured destination directory.
+     * - Any file whose resolved path escapes the base destination directory is rejected.
+     * - This prevents directory traversal attacks (e.g. `../../etc/passwd`).
+     * - Such files are not downloaded and instead return:
+     *   - `skipped = true`
+     *   - `reason = SkipReason.PATH_TRAVERSAL`
+     *
+     * **Additional validation:**
+     * - File names containing illegal drive prefixes (e.g. `C:\`) are skipped
+     * to prevent unintended writes on host systems.
+     *
      * @example
      * ```
      * const {Storage} = require('@google-cloud/storage');
@@ -189329,19 +188796,24 @@ class TransferManager {
      * // The following files have been downloaded:
      * // - "file1.txt" (with the contents from my-bucket.file1.txt)
      * // - "file2.txt" (with the contents from my-bucket.file2.txt)
+     * // response.length === 2 (always matches input length)
+     * // Each entry corresponds to the respective input file
      * const response = await transferManager.downloadManyFiles([bucket.File('file1.txt'), bucket.File('file2.txt')]);
      * // The following files have been downloaded:
      * // - "file1.txt" (with the contents from my-bucket.file1.txt)
      * // - "file2.txt" (with the contents from my-bucket.file2.txt)
      * const response = await transferManager.downloadManyFiles('test-folder');
-     * // All files with GCS prefix of 'test-folder' have been downloaded.
+     * // All files with GCS prefix of 'test-folder' have been processed.
+     * // Skipped or failed files are still included in the response.
      * ```
      *
      */
     async downloadManyFiles(filesOrFolder, options = {}) {
+        var _a;
         const limit = (0, p_limit_1.default)(options.concurrencyLimit || DEFAULT_PARALLEL_DOWNLOAD_LIMIT);
         const promises = [];
         let files = [];
+        const baseDestination = path.resolve(((_a = options.passthroughOptions) === null || _a === void 0 ? void 0 : _a.destination) || '.');
         if (!Array.isArray(filesOrFolder)) {
             const directoryFiles = await this.bucket.getFiles({
                 prefix: filesOrFolder,
@@ -189360,40 +188832,90 @@ class TransferManager {
             ? `^${options.stripPrefix}`
             : EMPTY_REGEX;
         const regex = new RegExp(stripRegexString, 'g');
-        for (const file of files) {
-            const passThroughOptionsCopy = {
-                ...options.passthroughOptions,
-                [util_js_1.GCCL_GCS_CMD_KEY]: GCCL_GCS_CMD_FEATURE.DOWNLOAD_MANY,
-            };
-            if (options.prefix || passThroughOptionsCopy.destination) {
-                passThroughOptionsCopy.destination = path.join(options.prefix || '', passThroughOptionsCopy.destination || '', file.name);
+        const finalResults = new Array(files.length);
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const hasIllegalDrive = /^[a-zA-Z]:/.test(file.name);
+            if (hasIllegalDrive) {
+                const skippedResult = [Buffer.alloc(0)];
+                skippedResult.skipped = true;
+                skippedResult.reason = file_js_1.SkipReason.ILLEGAL_CHARACTER;
+                skippedResult.fileName = file.name;
+                finalResults[i] = skippedResult;
+                continue;
             }
-            if (options.stripPrefix) {
-                passThroughOptionsCopy.destination = file.name.replace(regex, '');
+            const fileName = options.stripPrefix
+                ? file.name.replace(regex, '')
+                : file.name;
+            const dest = fileName.replace(/^[\\/]+/, '');
+            const resolvedPath = path.resolve(baseDestination, dest);
+            const relativeFromBase = path.relative(baseDestination, resolvedPath);
+            const isOutside = path.isAbsolute(relativeFromBase) ||
+                relativeFromBase.split(/[\\/]/).includes('..');
+            if (isOutside) {
+                const skippedResult = [Buffer.alloc(0)];
+                skippedResult.skipped = true;
+                skippedResult.reason = file_js_1.SkipReason.PATH_TRAVERSAL;
+                skippedResult.fileName = file.name;
+                skippedResult.localPath = resolvedPath;
+                finalResults[i] = skippedResult;
+                continue;
             }
-            if (options.skipIfExists &&
-                (0, fs_1.existsSync)(passThroughOptionsCopy.destination || '')) {
+            if (options.skipIfExists && (0, fs_1.existsSync)(resolvedPath)) {
+                const skippedResult = [Buffer.alloc(0)];
+                skippedResult.skipped = true;
+                skippedResult.reason = file_js_1.SkipReason.ALREADY_EXISTS;
+                skippedResult.fileName = file.name;
+                skippedResult.localPath = resolvedPath;
+                finalResults[i] = skippedResult;
                 continue;
             }
             promises.push(limit(async () => {
-                const destination = passThroughOptionsCopy.destination;
-                if (destination && destination.endsWith(path.sep)) {
-                    await fs_1.promises.mkdir(destination, { recursive: true });
-                    return Promise.resolve([
-                        Buffer.alloc(0),
-                    ]);
+                const passThroughOptionsCopy = {
+                    ...options.passthroughOptions,
+                    destination: resolvedPath,
+                    [util_js_1.GCCL_GCS_CMD_KEY]: GCCL_GCS_CMD_FEATURE.DOWNLOAD_MANY,
+                };
+                try {
+                    const destination = passThroughOptionsCopy.destination;
+                    if (destination.endsWith(path.sep) || destination.endsWith('/')) {
+                        await fs_1.promises.mkdir(destination, { recursive: true });
+                        const dirResp = [Buffer.alloc(0)];
+                        dirResp.skipped = false;
+                        dirResp.fileName = file.name;
+                        dirResp.localPath = destination;
+                        finalResults[i] = dirResp;
+                        return;
+                    }
+                    await fs_1.promises.mkdir(path.dirname(destination), { recursive: true });
+                    const resp = (await file.download(passThroughOptionsCopy));
+                    finalResults[i] = {
+                        ...resp,
+                        skipped: false,
+                        fileName: file.name,
+                        localPath: destination,
+                    };
                 }
-                return file.download(passThroughOptionsCopy);
+                catch (err) {
+                    const errorResp = [Buffer.alloc(0)];
+                    errorResp.skipped = true;
+                    errorResp.reason = file_js_1.SkipReason.DOWNLOAD_ERROR;
+                    errorResp.fileName = file.name;
+                    errorResp.localPath = resolvedPath;
+                    errorResp.error = err;
+                    finalResults[i] = errorResp;
+                }
             }));
         }
-        return Promise.all(promises);
+        await Promise.all(promises);
+        return finalResults;
     }
     /**
      * @typedef {object} DownloadFileInChunksOptions
      * @property {number} [concurrencyLimit] The number of concurrently executing promises
      * to use when downloading the file.
      * @property {number} [chunkSizeBytes] The size in bytes of each chunk to be downloaded.
-     * @property {string | boolean} [validation] Whether or not to perform a CRC32C validation check when download is complete.
+     * @property {'crc32c' | boolean} [validation] Whether or not to perform a CRC32C validation check when download is complete. Defaults to 'crc32c'.
      * @property {boolean} [noReturnData] Whether or not to return the downloaded data. A `true` value here would be useful for files with a size that will not fit into memory.
      *
      */
@@ -189414,10 +188936,19 @@ class TransferManager {
      *
      * //-
      * // Download a large file in chunks utilizing parallel operations.
+     * // CRC32C validation is performed by default.
      * //-
      * const response = await transferManager.downloadFileInChunks(bucket.file('large-file.txt');
      * // Your local directory now contains:
      * // - "large-file.txt" (with the contents from my-bucket.large-file.txt)
+     *
+     * //-
+     * // To disable validation:
+     * //-
+     * const responseWithoutValidation = await transferManager.downloadFileInChunks(
+     *   bucket.file('large-file.txt'),
+     *   { validation: false }
+     * );
      * ```
      *
      */
@@ -189429,6 +188960,10 @@ class TransferManager {
         const file = typeof fileOrName === 'string'
             ? this.bucket.file(fileOrName)
             : fileOrName;
+        // Default validation to 'crc32c' if undefined or true, otherwise respect user's value
+        const validation = options.validation === undefined || options.validation === true
+            ? 'crc32c'
+            : options.validation;
         const fileInfo = await file.get();
         const size = parseInt(fileInfo[0].metadata.size.toString());
         // If the file size does not meet the threshold download it as a single chunk.
@@ -189448,6 +188983,7 @@ class TransferManager {
                     start: chunkStart,
                     end: chunkEnd,
                     [util_js_1.GCCL_GCS_CMD_KEY]: GCCL_GCS_CMD_FEATURE.DOWNLOAD_SHARDED,
+                    validation: false, // Disable validation on individual chunks
                 });
                 const result = await fileToWrite.write(resp[0], 0, resp[0].length, chunkStart);
                 if (noReturnData)
@@ -189463,7 +188999,8 @@ class TransferManager {
         finally {
             await fileToWrite.close();
         }
-        if (options.validation === 'crc32c' && fileInfo[0].metadata.crc32c) {
+        // Check against the defaulted validation option
+        if (validation === 'crc32c' && fileInfo[0].metadata.crc32c) {
             const downloadedCrc32C = await crc32c_js_1.CRC32C.fromFile(filePath);
             if (!downloadedCrc32C.validate(fileInfo[0].metadata.crc32c)) {
                 const mismatchError = new file_js_1.RequestError(file_js_1.FileExceptionMessages.DOWNLOAD_MISMATCH);
@@ -189520,6 +189057,7 @@ class TransferManager {
      *
      */
     async uploadFileInChunks(filePath, options = {}, generator = defaultMultiPartGenerator) {
+        var _a;
         const chunkSize = options.chunkSizeBytes || UPLOAD_IN_CHUNKS_DEFAULT_CHUNK_SIZE;
         const limit = (0, p_limit_1.default)(options.concurrencyLimit || DEFAULT_PARALLEL_CHUNKED_UPLOAD_LIMIT);
         const maxQueueSize = options.maxQueueSize ||
@@ -189529,6 +189067,7 @@ class TransferManager {
         const mpuHelper = generator(this.bucket, fileName, options.uploadId, options.partsMap);
         let partNumber = 1;
         let promises = [];
+        const validation = (_a = options.validation) !== null && _a !== void 0 ? _a : 'crc32c';
         try {
             if (options.uploadId === undefined) {
                 await mpuHelper.initiateUpload(options.headers);
@@ -189545,7 +189084,7 @@ class TransferManager {
                     await Promise.all(promises);
                     promises = [];
                 }
-                promises.push(limit(() => mpuHelper.uploadPart(partNumber++, curChunk, options.validation)));
+                promises.push(limit(() => mpuHelper.uploadPart(partNumber++, curChunk, validation)));
             }
             await Promise.all(promises);
             return await mpuHelper.completeUpload();
@@ -189658,6 +189197,8 @@ exports.getRuntimeTrackingString = getRuntimeTrackingString;
 exports.getUserAgentString = getUserAgentString;
 exports.getDirName = getDirName;
 exports.getModuleFormat = getModuleFormat;
+exports.validateContexts = validateContexts;
+exports.handleContextValidation = handleContextValidation;
 const path = __importStar(__nccwpck_require__(71017));
 const querystring = __importStar(__nccwpck_require__(63477));
 const stream_1 = __nccwpck_require__(12781);
@@ -189865,6 +189406,41 @@ class PassThroughShim extends stream_1.PassThrough {
   }
 }
 exports.PassThroughShim = PassThroughShim;
+/**
+ * Validates Object Contexts for forbidden characters.
+ * Double quotes (") are forbidden in context keys and values as they
+ * interfere with GCS filter string syntax.
+ *
+ * @param {FileMetadata['contexts']} contexts The contexts object to validate.
+ * @returns {void} Throws an error if validation fails.
+ */
+function validateContexts(contexts) {
+  const custom = contexts === null || contexts === void 0 ? void 0 : contexts.custom;
+  if (!custom) return;
+  for (const [key, context] of Object.entries(custom)) {
+    if (key.includes('"')) {
+      throw new Error(`Invalid context key "${key}": Forbidden character (") detected.`);
+    }
+    if ((context === null || context === void 0 ? void 0 : context.value) && context.value.includes('"')) {
+      throw new Error(`Invalid context value for key "${key}": Forbidden character (") detected.`);
+    }
+  }
+}
+/**
+ * Helper to validate contexts and route errors to either a callback or a Promise.
+ * @param contexts The contexts to validate.
+ * @param callback The optional user-provided callback.
+ */
+function handleContextValidation(contexts, callback) {
+  try {
+    validateContexts(contexts);
+  } catch (err) {
+    if (callback) {
+      return callback(err);
+    }
+    return Promise.reject(err);
+  }
+}
 
 
 /***/ }),
@@ -200685,7 +200261,7 @@ module.exports = JSON.parse('{"name":"@actions/cache","version":"6.0.0","descrip
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"7.19.0","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=14"},"repository":"googleapis/nodejs-storage","main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"npm test && npm run system-test && npm run samples-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs-test":"linkinator docs","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"npm run compile:cjs -- --sourceMap","predocs-test":"npm run docs","predocs":"npm run compile:cjs -- --sourceMap","prelint":"cd samples; npm link ../; npm install","prepare":"npm run compile","presystem-test:esm":"npm run compile:esm","presystem-test":"npm run compile -- --sourceMap","pretest":"npm run compile -- --sourceMap","samples-test":"npm link && cd samples/ && npm link ../ && npm test && cd ../","system-test:esm":"mocha build/esm/system-test --timeout 600000 --exit","system-test":"mocha build/cjs/system-test --timeout 600000 --exit","test":"c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^5.0.0","@google-cloud/projectify":"^4.0.0","@google-cloud/promisify":"<4.1.0","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^7.0.0","teeny-request":"^9.0.0","uuid":"^8.0.0"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^4.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/node-fetch":"^2.1.3","@types/proxyquire":"^1.3.28","@types/request":"^2.48.4","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/uuid":"^8.0.0","@types/yargs":"^17.0.10","c8":"^9.0.0","form-data":"^4.0.4","gapic-tools":"^0.4.0","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^5.0.0","jsdoc-region-tag":"^4.0.0","linkinator":"^3.0.0","mocha":"^9.2.2","mockery":"^2.1.0","nock":"~13.5.0","node-fetch":"^2.6.7","pack-n-play":"^2.0.0","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.3.1"}}');
+module.exports = JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"7.21.0","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=14"},"repository":{"type":"git","directory":"handwritten/storage","url":"https://github.com/googleapis/google-cloud-node.git"},"main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"npm test && npm run system-test && npm run samples-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"npm run compile:cjs -- --sourceMap","predocs":"npm run compile:cjs -- --sourceMap","prelint":"cd samples; npm link ../; npm install","prepare":"npm run compile","presystem-test:esm":"npm run compile:esm","presystem-test":"npm run compile -- --sourceMap","pretest":"npm run compile -- --sourceMap","samples-test":"npm link && cd samples/ && npm link ../ && npm test && cd ../","system-test:esm":"mocha build/esm/system-test --timeout 600000 --exit","system-test":"mocha build/cjs/system-test --timeout 600000 --exit","test":"cross-env NODE_OPTIONS=\'--no-deprecation\' c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^5.0.0","@google-cloud/projectify":"^4.0.0","@google-cloud/promisify":"<4.1.0","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^7.0.0","teeny-request":"^9.0.0"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^4.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/node-fetch":"^2.1.3","@types/proxyquire":"^1.3.28","@types/request":"^2.48.4","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/yargs":"^17.0.10","c8":"^9.0.0","form-data":"^4.0.4","gapic-tools":"^0.4.0","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^5.0.0","jsdoc-region-tag":"^4.0.0","mocha":"^9.2.2","mockery":"^2.1.0","nock":"~13.5.0","node-fetch":"^2.6.7","pack-n-play":"^2.0.0","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.3.1","cross-env":"^7.0.3"},"homepage":"https://github.com/googleapis/google-cloud-node/tree/main/handwritten/storage"}');
 
 /***/ }),
 
