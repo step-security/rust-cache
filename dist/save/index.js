@@ -176471,7 +176471,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Bucket = exports.BucketExceptionMessages = exports.AvailableServiceObjectMethods = exports.BucketActionToHTTPMethod = void 0;
+exports.Bucket = exports.BucketExceptionMessages = exports.AvailableServiceObjectMethods = exports.BucketActionToHTTPMethod = exports.ComposeCleanupError = void 0;
 const index_js_1 = __nccwpck_require__(4052);
 const paginator_1 = __nccwpck_require__(46412);
 const promisify_1 = __nccwpck_require__(19203);
@@ -176490,6 +176490,16 @@ const storage_js_1 = __nccwpck_require__(33030);
 const signer_js_1 = __nccwpck_require__(59019);
 const stream_1 = __nccwpck_require__(12781);
 const url_1 = __nccwpck_require__(57310);
+class ComposeCleanupError extends Error {
+    constructor(message, errors, newFile, apiResponse) {
+        super(message);
+        this.name = 'ComposeCleanupError';
+        this.errors = errors;
+        this.newFile = newFile;
+        this.apiResponse = apiResponse;
+    }
+}
+exports.ComposeCleanupError = ComposeCleanupError;
 var BucketActionToHTTPMethod;
 (function (BucketActionToHTTPMethod) {
     BucketActionToHTTPMethod["list"] = "GET";
@@ -177452,7 +177462,9 @@ class Bucket extends index_js_1.ServiceObject {
      * metadata's `kms_key_name` value, if any.
      * @property {string} [userProject] The ID of the project which will be
      *     billed for the request.
-     */
+      * @property {boolean} [deleteSourceObjects] If true, the source objects
+      *     will be permanently deleted after a successful compose operation.
+      */
     /**
      * @callback CombineCallback
      * @param {?Error} err Request error, if any.
@@ -177485,7 +177497,8 @@ class Bucket extends index_js_1.ServiceObject {
      * metadata's `kms_key_name` value, if any.
      * @param {string} [options.userProject] The ID of the project which will be
      *     billed for the request.
-  
+     * @param {boolean} [options.deleteSourceObjects] If true, the source objects
+     *     will be permanently deleted after a successful compose operation.
      * @param {CombineCallback} [callback] Callback function.
      * @returns {Promise<CombineResponse>}
      *
@@ -177562,8 +177575,11 @@ class Bucket extends index_js_1.ServiceObject {
                 storage_js_1.IdempotencyStrategy.RetryNever) {
             maxRetries = 0;
         }
-        if (options.ifGenerationMatch === undefined) {
-            Object.assign(options, destinationFile.instancePreconditionOpts, options);
+        const deleteSourceObjects = options.deleteSourceObjects;
+        const requestQueryObject = Object.assign({}, options);
+        delete requestQueryObject.deleteSourceObjects;
+        if (requestQueryObject.ifGenerationMatch === undefined) {
+            Object.assign(requestQueryObject, destinationFile.instancePreconditionOpts, requestQueryObject);
         }
         // Make the request from the destination File object.
         destinationFile.request({
@@ -177574,26 +177590,55 @@ class Bucket extends index_js_1.ServiceObject {
                 destination: {
                     contentType: destinationFile.metadata.contentType,
                     contentEncoding: destinationFile.metadata.contentEncoding,
-                    contexts: options.contexts || destinationFile.metadata.contexts,
+                    contexts: requestQueryObject.contexts || destinationFile.metadata.contexts,
                 },
                 sourceObjects: sources.map(source => {
+                    var _a, _b;
                     const sourceObject = {
                         name: source.name,
                     };
-                    if (source.metadata && source.metadata.generation) {
-                        sourceObject.generation = parseInt(source.metadata.generation.toString());
+                    const generation = (_a = source.generation) !== null && _a !== void 0 ? _a : (_b = source.metadata) === null || _b === void 0 ? void 0 : _b.generation;
+                    if (generation !== undefined) {
+                        sourceObject.generation = parseInt(generation.toString());
                     }
                     return sourceObject;
                 }),
             },
-            qs: options,
+            qs: requestQueryObject,
         }, (err, resp) => {
             this.storage.retryOptions.autoRetry = this.instanceRetryValue;
             if (err) {
                 callback(err, null, resp);
                 return;
             }
-            callback(null, destinationFile, resp);
+            if (deleteSourceObjects) {
+                const deletePromises = sources.map(source => {
+                    var _a, _b;
+                    const deleteOptions = {
+                        ignoreNotFound: true,
+                        userProject: options.userProject,
+                    };
+                    const generation = (_a = source.generation) !== null && _a !== void 0 ? _a : (_b = source.metadata) === null || _b === void 0 ? void 0 : _b.generation;
+                    if (generation !== undefined) {
+                        deleteOptions.ifGenerationMatch = generation;
+                    }
+                    return source
+                        .delete(deleteOptions)
+                        .catch(deleteErr => deleteErr);
+                });
+                Promise.all(deletePromises).then(results => {
+                    const errors = results.filter((res) => res instanceof Error);
+                    if (errors.length > 0) {
+                        const cleanupErr = new ComposeCleanupError(`Compose operation succeeded, but cleaning up source objects failed. Failed to delete ${errors.length} source object(s).`, errors, destinationFile, resp);
+                        callback(cleanupErr, destinationFile, resp);
+                        return;
+                    }
+                    callback(null, destinationFile, resp);
+                });
+            }
+            else {
+                callback(null, destinationFile, resp);
+            }
         });
     }
     /**
@@ -179855,10 +179900,16 @@ class Bucket extends index_js_1.ServiceObject {
                     if (options.onUploadProgress) {
                         writable.on('progress', options.onUploadProgress);
                     }
-                    fs.createReadStream(pathString)
-                        .on('error', bail)
+                    const readStream = fs.createReadStream(pathString);
+                    readStream
+                        .on('error', err => {
+                        readStream.destroy();
+                        writable.destroy();
+                        bail(err);
+                    })
                         .pipe(writable)
                         .on('error', err => {
+                        readStream.destroy();
                         if (this.storage.retryOptions.autoRetry &&
                             this.storage.retryOptions.retryableErrorFn(err)) {
                             return reject(err);
@@ -181994,6 +182045,27 @@ class File extends index_js_1.ServiceObject {
             }
             // remove temporary noop listener as we now create a pipeline that handles the errors
             emitStream.removeListener('error', noop);
+            if (fileWriteStream.destroyed) {
+                let callbackCalled = false;
+                const onError = (err) => {
+                    if (!callbackCalled) {
+                        callbackCalled = true;
+                        pipelineCallback(err);
+                    }
+                };
+                fileWriteStream.once('error', onError);
+                emitStream.destroy();
+                process.nextTick(() => {
+                    fileWriteStream.removeListener('error', onError);
+                    if (!callbackCalled) {
+                        callbackCalled = true;
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const err = fileWriteStream.errored || new Error('Write stream destroyed');
+                        pipelineCallback(err);
+                    }
+                });
+                return;
+            }
             (0, stream_1.pipeline)(emitStream, ...transformStreams, fileWriteStream, async (e) => {
                 if (e) {
                     return pipelineCallback(e);
@@ -182861,6 +182933,7 @@ class File extends index_js_1.ServiceObject {
             contentMd5: cfg.contentMd5,
             contentType: cfg.contentType,
             host: cfg.host,
+            signingEndpoint: cfg.signingEndpoint,
         };
         if (cfg.cname) {
             signConfig.cname = cfg.cname;
@@ -184888,7 +184961,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Notification = exports.Iam = exports.HmacKey = exports.File = exports.Channel = exports.Bucket = exports.Storage = exports.RETRYABLE_ERR_FN_DEFAULT = exports.IdempotencyStrategy = exports.ApiError = void 0;
+exports.Notification = exports.Iam = exports.HmacKey = exports.File = exports.Channel = exports.ComposeCleanupError = exports.Bucket = exports.Storage = exports.RETRYABLE_ERR_FN_DEFAULT = exports.IdempotencyStrategy = exports.ApiError = void 0;
 /**
  * The `@google-cloud/storage` package has a single named export which is the
  * {@link Storage} (ES6) class, which should be instantiated with `new`.
@@ -184941,6 +185014,7 @@ Object.defineProperty(exports, "RETRYABLE_ERR_FN_DEFAULT", ({ enumerable: true, 
 Object.defineProperty(exports, "Storage", ({ enumerable: true, get: function () { return storage_js_1.Storage; } }));
 var bucket_js_1 = __nccwpck_require__(23973);
 Object.defineProperty(exports, "Bucket", ({ enumerable: true, get: function () { return bucket_js_1.Bucket; } }));
+Object.defineProperty(exports, "ComposeCleanupError", ({ enumerable: true, get: function () { return bucket_js_1.ComposeCleanupError; } }));
 __exportStar(__nccwpck_require__(55810), exports);
 var channel_js_1 = __nccwpck_require__(62665);
 Object.defineProperty(exports, "Channel", ({ enumerable: true, get: function () { return channel_js_1.Channel; } }));
@@ -186148,6 +186222,20 @@ class Util {
             delete reqOpts.json.autoPaginate;
             delete reqOpts.json.autoPaginateVal;
             reqOpts.json = (0, projectify_1.replaceProjectIdToken)(reqOpts.json, projectId);
+            const headers = reqOpts.headers || {};
+            if (typeof headers.set === 'function' &&
+                typeof headers.has === 'function') {
+                if (!headers.has('content-type')) {
+                    headers.set('Content-Type', 'application/json');
+                }
+                reqOpts.headers = headers;
+            }
+            else {
+                const hasContentType = Object.keys(headers).some(key => key.toLowerCase() === 'content-type');
+                reqOpts.headers = hasContentType
+                    ? headers
+                    : { ...headers, 'Content-Type': 'application/json' };
+            }
         }
         reqOpts.uri = (0, projectify_1.replaceProjectIdToken)(reqOpts.uri, projectId);
         return reqOpts;
@@ -187379,7 +187467,7 @@ class Upload extends stream_1.Writable {
             else {
                 const retryDelay = this.getRetryDelay();
                 if (retryDelay <= 0) {
-                    this.destroy(new Error(`Retry total time limit exceeded - ${JSON.stringify(resp.data)}`));
+                    this.destroy(buildRetryError('Retry total time limit exceeded', resp));
                     return;
                 }
                 // Unshift the local cache back in case it's needed for the next request.
@@ -187397,7 +187485,7 @@ class Upload extends stream_1.Writable {
             this.numRetries++;
         }
         else {
-            this.destroy(new Error(`Retry limit exceeded - ${JSON.stringify(resp.data)}`));
+            this.destroy(buildRetryError('Retry limit exceeded', resp));
         }
     }
     /**
@@ -187475,6 +187563,62 @@ _Upload_hashValidator = new WeakMap(), _Upload_clientCrc32c = new WeakMap(), _Up
         headers['X-Goog-Hash'] = checksums.join(',');
     }
 };
+function buildRetryError(prefix, resp) {
+    var _a, _b, _c, _d;
+    const parts = [];
+    if (typeof resp.status === 'number' && !isNaN(resp.status)) {
+        parts.push(`status: ${resp.status}`);
+    }
+    const err = resp.data;
+    if (err !== undefined && err !== null) {
+        if (typeof err === 'object') {
+            const gaxiosErrLike = err;
+            const errParts = [];
+            if (gaxiosErrLike.message) {
+                errParts.push(String(gaxiosErrLike.message));
+            }
+            const status = (_a = gaxiosErrLike.status) !== null && _a !== void 0 ? _a : (_b = gaxiosErrLike.response) === null || _b === void 0 ? void 0 : _b.status;
+            if (typeof status === 'number' && !isNaN(status) && status !== resp.status) {
+                errParts.push(`status: ${status}`);
+            }
+            const statusText = (_c = gaxiosErrLike.response) === null || _c === void 0 ? void 0 : _c.statusText;
+            if (statusText) {
+                errParts.push(`statusText: ${statusText}`);
+            }
+            const responseData = (_d = gaxiosErrLike.response) === null || _d === void 0 ? void 0 : _d.data;
+            if (responseData !== undefined && responseData !== null && responseData !== '') {
+                errParts.push(`response: ${typeof responseData === 'object'
+                    ? JSON.stringify(responseData)
+                    : responseData}`);
+            }
+            if (gaxiosErrLike.code) {
+                errParts.push(`code: ${String(gaxiosErrLike.code)}`);
+            }
+            if (errParts.length > 0) {
+                parts.push(...errParts);
+            }
+            else if (err instanceof Error) {
+                parts.push(err.toString() || err.name || 'Unknown Error');
+            }
+            else {
+                const stringified = JSON.stringify(err);
+                if (stringified && stringified !== '{}') {
+                    parts.push(stringified);
+                }
+            }
+        }
+        else if (typeof err === 'string') {
+            if (err !== '') {
+                parts.push(err);
+            }
+        }
+        else {
+            parts.push(String(err));
+        }
+    }
+    const suffix = parts.join(' - ');
+    return new Error(`${prefix} - ${suffix || 'Unknown Error'}`);
+}
 function upload(cfg) {
     return new Upload(cfg);
 }
@@ -201862,7 +202006,7 @@ module.exports = JSON.parse('{"name":"@actions/cache","version":"6.0.0","descrip
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"7.21.0","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=14"},"repository":{"type":"git","directory":"handwritten/storage","url":"https://github.com/googleapis/google-cloud-node.git"},"main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"npm test && npm run system-test && npm run samples-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"npm run compile:cjs -- --sourceMap","predocs":"npm run compile:cjs -- --sourceMap","prelint":"cd samples; npm link ../; npm install","prepare":"npm run compile","presystem-test:esm":"npm run compile:esm","presystem-test":"npm run compile -- --sourceMap","pretest":"npm run compile -- --sourceMap","samples-test":"npm link && cd samples/ && npm link ../ && npm test && cd ../","system-test:esm":"mocha build/esm/system-test --timeout 600000 --exit","system-test":"mocha build/cjs/system-test --timeout 600000 --exit","test":"cross-env NODE_OPTIONS=\'--no-deprecation\' c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^5.0.0","@google-cloud/projectify":"^4.0.0","@google-cloud/promisify":"<4.1.0","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^7.0.0","teeny-request":"^9.0.0"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^4.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/node-fetch":"^2.1.3","@types/proxyquire":"^1.3.28","@types/request":"^2.48.4","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/yargs":"^17.0.10","c8":"^9.0.0","form-data":"^4.0.4","gapic-tools":"^0.4.0","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^5.0.0","jsdoc-region-tag":"^4.0.0","mocha":"^9.2.2","mockery":"^2.1.0","nock":"~13.5.0","node-fetch":"^2.6.7","pack-n-play":"^2.0.0","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.3.1","cross-env":"^7.0.3"},"homepage":"https://github.com/googleapis/google-cloud-node/tree/main/handwritten/storage"}');
+module.exports = JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"7.22.0","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=18"},"repository":{"type":"git","directory":"handwritten/storage","url":"https://github.com/googleapis/google-cloud-node.git"},"main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"npm test && npm run system-test && npm run samples-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"npm run compile:cjs -- --sourceMap","predocs":"npm run compile:cjs -- --sourceMap","prelint":"cd samples; npm link ../; npm install","prepare":"npm run compile","presystem-test:esm":"npm run compile:esm","presystem-test":"npm run compile -- --sourceMap","pretest":"npm run compile -- --sourceMap","samples-test":"npm link && cd samples/ && npm link ../ && npm test && cd ../","system-test:esm":"mkdir -p $HOME/.config && mocha build/esm/system-test --timeout 600000 --exit","system-test":"mkdir -p $HOME/.config && mocha build/cjs/system-test --timeout 600000 --exit","test":"cross-env NODE_OPTIONS=\\"--require ./scripts/preload-yargs.cjs --no-deprecation\\" c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^5.0.0","@google-cloud/projectify":"^4.0.0","@google-cloud/promisify":"<4.1.0","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^7.0.0","teeny-request":"^9.0.0"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^4.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/node-fetch":"^2.1.3","@types/proxyquire":"^1.3.28","@types/request":"^2.48.4","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/yargs":"^17.0.35","c8":"^9.0.0","form-data":"^4.0.4","gapic-tools":"^0.4.0","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^5.0.0","jsdoc-region-tag":"^4.0.0","mocha":"^9.2.2","mockery":"^2.1.0","nock":"~13.5.0","node-fetch":"^2.6.7","pack-n-play":"^2.0.0","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.7.2","cross-env":"^7.0.3"},"homepage":"https://github.com/googleapis/google-cloud-node/tree/main/handwritten/storage"}');
 
 /***/ }),
 
