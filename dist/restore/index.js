@@ -89227,8 +89227,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GaxiosError = exports.GAXIOS_ERROR_SYMBOL = void 0;
-exports.defaultErrorRedactor = defaultErrorRedactor;
+exports.defaultErrorRedactor = exports.GaxiosError = exports.GAXIOS_ERROR_SYMBOL = void 0;
 const url_1 = __nccwpck_require__(57310);
 const util_1 = __nccwpck_require__(21980);
 const extend_1 = __importDefault(__nccwpck_require__(38171));
@@ -89330,15 +89329,7 @@ function defaultErrorRedactor(data) {
             return;
         for (const key of Object.keys(headers)) {
             // any casing of `Authentication`
-            if (/^authentication$/i.test(key)) {
-                headers[key] = REDACT;
-            }
-            // any casing of `Authorization`
-            if (/^authorization$/i.test(key)) {
-                headers[key] = REDACT;
-            }
-            // anything containing secret, such as 'client secret'
-            if (/secret/i.test(key)) {
+            if (/^authentication$/.test(key)) {
                 headers[key] = REDACT;
             }
         }
@@ -89348,9 +89339,7 @@ function defaultErrorRedactor(data) {
             obj !== null &&
             typeof obj[key] === 'string') {
             const text = obj[key];
-            if (/grant_type=/i.test(text) ||
-                /assertion=/i.test(text) ||
-                /secret/i.test(text)) {
+            if (/grant_type=/.test(text) || /assertion=/.test(text)) {
                 obj[key] = REDACT;
             }
         }
@@ -89362,9 +89351,6 @@ function defaultErrorRedactor(data) {
             }
             if ('assertion' in obj) {
                 obj['assertion'] = REDACT;
-            }
-            if ('client_secret' in obj) {
-                obj['client_secret'] = REDACT;
             }
         }
     }
@@ -89378,9 +89364,6 @@ function defaultErrorRedactor(data) {
             const url = new url_1.URL('', data.config.url);
             if (url.searchParams.has('token')) {
                 url.searchParams.set('token', REDACT);
-            }
-            if (url.searchParams.has('client_secret')) {
-                url.searchParams.set('client_secret', REDACT);
             }
             data.config.url = url.toString();
         }
@@ -89396,6 +89379,7 @@ function defaultErrorRedactor(data) {
     }
     return data;
 }
+exports.defaultErrorRedactor = defaultErrorRedactor;
 //# sourceMappingURL=common.js.map
 
 /***/ }),
@@ -89417,44 +89401,9 @@ function defaultErrorRedactor(data) {
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
-    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
-};
-var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
-    if (kind === "m") throw new TypeError("Private method is not writable");
-    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
-    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
-    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var _Gaxios_instances, _a, _Gaxios_urlMayUseProxy, _Gaxios_applyRequestInterceptors, _Gaxios_applyResponseInterceptors, _Gaxios_prepareRequest, _Gaxios_proxyAgent, _Gaxios_getProxyAgent;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Gaxios = void 0;
 const extend_1 = __importDefault(__nccwpck_require__(38171));
@@ -89465,9 +89414,7 @@ const is_stream_1 = __importDefault(__nccwpck_require__(41554));
 const url_1 = __nccwpck_require__(57310);
 const common_1 = __nccwpck_require__(66129);
 const retry_1 = __nccwpck_require__(31052);
-const stream_1 = __nccwpck_require__(12781);
-const uuid_1 = __nccwpck_require__(19694);
-const interceptor_1 = __nccwpck_require__(14309);
+const https_proxy_agent_1 = __nccwpck_require__(77219);
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fetch = hasFetch() ? window.fetch : node_fetch_1.default;
 function hasWindow() {
@@ -89491,28 +89438,65 @@ function getHeader(options, header) {
     }
     return undefined;
 }
+let HttpsProxyAgent;
+function loadProxy() {
+    var _a, _b, _c, _d;
+    const proxy = ((_a = process === null || process === void 0 ? void 0 : process.env) === null || _a === void 0 ? void 0 : _a.HTTPS_PROXY) ||
+        ((_b = process === null || process === void 0 ? void 0 : process.env) === null || _b === void 0 ? void 0 : _b.https_proxy) ||
+        ((_c = process === null || process === void 0 ? void 0 : process.env) === null || _c === void 0 ? void 0 : _c.HTTP_PROXY) ||
+        ((_d = process === null || process === void 0 ? void 0 : process.env) === null || _d === void 0 ? void 0 : _d.http_proxy);
+    if (proxy) {
+        HttpsProxyAgent = https_proxy_agent_1.HttpsProxyAgent;
+    }
+    return proxy;
+}
+loadProxy();
+function skipProxy(url) {
+    var _a;
+    const noProxyEnv = (_a = process.env.NO_PROXY) !== null && _a !== void 0 ? _a : process.env.no_proxy;
+    if (!noProxyEnv) {
+        return false;
+    }
+    const noProxyUrls = noProxyEnv.split(',');
+    const parsedURL = url instanceof url_1.URL ? url : new url_1.URL(url);
+    return !!noProxyUrls.find(url => {
+        if (url.startsWith('*.') || url.startsWith('.')) {
+            url = url.replace(/^\*\./, '.');
+            return parsedURL.hostname.endsWith(url);
+        }
+        else {
+            return url === parsedURL.origin || url === parsedURL.hostname;
+        }
+    });
+}
+// Figure out if we should be using a proxy. Only if it's required, load
+// the https-proxy-agent module as it adds startup cost.
+function getProxy(url) {
+    // If there is a match between the no_proxy env variables and the url, then do not proxy
+    if (skipProxy(url)) {
+        return undefined;
+        // If there is not a match between the no_proxy env variables and the url, check to see if there should be a proxy
+    }
+    else {
+        return loadProxy();
+    }
+}
 class Gaxios {
     /**
      * The Gaxios class is responsible for making HTTP requests.
      * @param defaults The default set of options to be used for this instance.
      */
     constructor(defaults) {
-        _Gaxios_instances.add(this);
         this.agentCache = new Map();
         this.defaults = defaults || {};
-        this.interceptors = {
-            request: new interceptor_1.GaxiosInterceptorManager(),
-            response: new interceptor_1.GaxiosInterceptorManager(),
-        };
     }
     /**
      * Perform an HTTP request with the given options.
      * @param opts Set of HTTP options that will be used for this HTTP request.
      */
     async request(opts = {}) {
-        opts = await __classPrivateFieldGet(this, _Gaxios_instances, "m", _Gaxios_prepareRequest).call(this, opts);
-        opts = await __classPrivateFieldGet(this, _Gaxios_instances, "m", _Gaxios_applyRequestInterceptors).call(this, opts);
-        return __classPrivateFieldGet(this, _Gaxios_instances, "m", _Gaxios_applyResponseInterceptors).call(this, this._request(opts));
+        opts = this.validateOpts(opts);
+        return this._request(opts);
     }
     async _defaultAdapter(opts) {
         const fetchImpl = opts.fetchImplementation || fetch;
@@ -89525,7 +89509,7 @@ class Gaxios {
      * @param opts Set of HTTP options that will be used for this HTTP request.
      */
     async _request(opts = {}) {
-        var _b;
+        var _a;
         try {
             let translatedResponse;
             if (opts.adapter) {
@@ -89559,7 +89543,7 @@ class Gaxios {
                     config.retryConfig.currentRetryAttempt;
                 // The error's config could be redacted - therefore we only want to
                 // copy the retry state over to the existing config
-                opts.retryConfig = (_b = err.config) === null || _b === void 0 ? void 0 : _b.retryConfig;
+                opts.retryConfig = (_a = err.config) === null || _a === void 0 ? void 0 : _a.retryConfig;
                 return this._request(opts);
             }
             throw err;
@@ -89574,7 +89558,7 @@ class Gaxios {
                 try {
                     data = JSON.parse(data);
                 }
-                catch (_b) {
+                catch (_a) {
                     // continue
                 }
                 return data;
@@ -89588,6 +89572,119 @@ class Gaxios {
             default:
                 return this.getResponseDataFromContentType(res);
         }
+    }
+    /**
+     * Validates the options, and merges them with defaults.
+     * @param opts The original options passed from the client.
+     */
+    validateOpts(options) {
+        const opts = (0, extend_1.default)(true, {}, this.defaults, options);
+        if (!opts.url) {
+            throw new Error('URL is required.');
+        }
+        // baseUrl has been deprecated, remove in 2.0
+        const baseUrl = opts.baseUrl || opts.baseURL;
+        if (baseUrl) {
+            opts.url = baseUrl.toString() + opts.url;
+        }
+        opts.paramsSerializer = opts.paramsSerializer || this.paramsSerializer;
+        if (opts.params && Object.keys(opts.params).length > 0) {
+            let additionalQueryParams = opts.paramsSerializer(opts.params);
+            if (additionalQueryParams.startsWith('?')) {
+                additionalQueryParams = additionalQueryParams.slice(1);
+            }
+            const prefix = opts.url.toString().includes('?') ? '&' : '?';
+            opts.url = opts.url + prefix + additionalQueryParams;
+        }
+        if (typeof options.maxContentLength === 'number') {
+            opts.size = options.maxContentLength;
+        }
+        if (typeof options.maxRedirects === 'number') {
+            opts.follow = options.maxRedirects;
+        }
+        opts.headers = opts.headers || {};
+        if (opts.data) {
+            const isFormData = typeof FormData === 'undefined'
+                ? false
+                : (opts === null || opts === void 0 ? void 0 : opts.data) instanceof FormData;
+            if (is_stream_1.default.readable(opts.data)) {
+                opts.body = opts.data;
+            }
+            else if (hasBuffer() && Buffer.isBuffer(opts.data)) {
+                // Do not attempt to JSON.stringify() a Buffer:
+                opts.body = opts.data;
+                if (!hasHeader(opts, 'Content-Type')) {
+                    opts.headers['Content-Type'] = 'application/json';
+                }
+            }
+            else if (typeof opts.data === 'object') {
+                // If www-form-urlencoded content type has been set, but data is
+                // provided as an object, serialize the content using querystring:
+                if (!isFormData) {
+                    if (getHeader(opts, 'content-type') ===
+                        'application/x-www-form-urlencoded') {
+                        opts.body = opts.paramsSerializer(opts.data);
+                    }
+                    else {
+                        // } else if (!(opts.data instanceof FormData)) {
+                        if (!hasHeader(opts, 'Content-Type')) {
+                            opts.headers['Content-Type'] = 'application/json';
+                        }
+                        opts.body = JSON.stringify(opts.data);
+                    }
+                }
+            }
+            else {
+                opts.body = opts.data;
+            }
+        }
+        opts.validateStatus = opts.validateStatus || this.validateStatus;
+        opts.responseType = opts.responseType || 'unknown';
+        if (!opts.headers['Accept'] && opts.responseType === 'json') {
+            opts.headers['Accept'] = 'application/json';
+        }
+        opts.method = opts.method || 'GET';
+        const proxy = getProxy(opts.url);
+        if (proxy) {
+            if (this.agentCache.has(proxy)) {
+                opts.agent = this.agentCache.get(proxy);
+            }
+            else {
+                // Proxy is being used in conjunction with mTLS.
+                if (opts.cert && opts.key) {
+                    const parsedURL = new url_1.URL(proxy);
+                    opts.agent = new HttpsProxyAgent({
+                        port: parsedURL.port,
+                        host: parsedURL.host,
+                        protocol: parsedURL.protocol,
+                        cert: opts.cert,
+                        key: opts.key,
+                    });
+                }
+                else {
+                    opts.agent = new HttpsProxyAgent(proxy);
+                }
+                this.agentCache.set(proxy, opts.agent);
+            }
+        }
+        else if (opts.cert && opts.key) {
+            // Configure client for mTLS:
+            if (this.agentCache.has(opts.key)) {
+                opts.agent = this.agentCache.get(opts.key);
+            }
+            else {
+                opts.agent = new https_1.Agent({
+                    cert: opts.cert,
+                    key: opts.key,
+                });
+                this.agentCache.set(opts.key, opts.agent);
+            }
+        }
+        if (typeof opts.errorRedactor !== 'function' &&
+            opts.errorRedactor !== false) {
+            opts.errorRedactor = common_1.defaultErrorRedactor;
+        }
+        return opts;
     }
     /**
      * By default, throw for any non-2xx status code
@@ -89638,7 +89735,7 @@ class Gaxios {
             try {
                 data = JSON.parse(data);
             }
-            catch (_b) {
+            catch (_a) {
                 // continue
             }
             return data;
@@ -89651,244 +89748,14 @@ class Gaxios {
             return response.blob();
         }
     }
-    /**
-     * Creates an async generator that yields the pieces of a multipart/related request body.
-     * This implementation follows the spec: https://www.ietf.org/rfc/rfc2387.txt. However, recursive
-     * multipart/related requests are not currently supported.
-     *
-     * @param {GaxioMultipartOptions[]} multipartOptions the pieces to turn into a multipart/related body.
-     * @param {string} boundary the boundary string to be placed between each part.
-     */
-    async *getMultipartRequest(multipartOptions, boundary) {
-        const finale = `--${boundary}--`;
-        for (const currentPart of multipartOptions) {
-            const partContentType = currentPart.headers['Content-Type'] || 'application/octet-stream';
-            const preamble = `--${boundary}\r\nContent-Type: ${partContentType}\r\n\r\n`;
-            yield preamble;
-            if (typeof currentPart.content === 'string') {
-                yield currentPart.content;
-            }
-            else {
-                yield* currentPart.content;
-            }
-            yield '\r\n';
-        }
-        yield finale;
-    }
 }
 exports.Gaxios = Gaxios;
-_a = Gaxios, _Gaxios_instances = new WeakSet(), _Gaxios_urlMayUseProxy = function _Gaxios_urlMayUseProxy(url, noProxy = []) {
-    var _b, _c;
-    const candidate = new url_1.URL(url);
-    const noProxyList = [...noProxy];
-    const noProxyEnvList = ((_c = ((_b = process.env.NO_PROXY) !== null && _b !== void 0 ? _b : process.env.no_proxy)) === null || _c === void 0 ? void 0 : _c.split(',')) || [];
-    for (const rule of noProxyEnvList) {
-        noProxyList.push(rule.trim());
-    }
-    for (const rule of noProxyList) {
-        // Match regex
-        if (rule instanceof RegExp) {
-            if (rule.test(candidate.toString())) {
-                return false;
-            }
-        }
-        // Match URL
-        else if (rule instanceof url_1.URL) {
-            if (rule.origin === candidate.origin) {
-                return false;
-            }
-        }
-        // Match string regex
-        else if (rule.startsWith('*.') || rule.startsWith('.')) {
-            const cleanedRule = rule.replace(/^\*\./, '.');
-            if (candidate.hostname.endsWith(cleanedRule)) {
-                return false;
-            }
-        }
-        // Basic string match
-        else if (rule === candidate.origin ||
-            rule === candidate.hostname ||
-            rule === candidate.href) {
-            return false;
-        }
-    }
-    return true;
-}, _Gaxios_applyRequestInterceptors = 
-/**
- * Applies the request interceptors. The request interceptors are applied after the
- * call to prepareRequest is completed.
- *
- * @param {GaxiosOptions} options The current set of options.
- *
- * @returns {Promise<GaxiosOptions>} Promise that resolves to the set of options or response after interceptors are applied.
- */
-async function _Gaxios_applyRequestInterceptors(options) {
-    let promiseChain = Promise.resolve(options);
-    for (const interceptor of this.interceptors.request.values()) {
-        if (interceptor) {
-            promiseChain = promiseChain.then(interceptor.resolved, interceptor.rejected);
-        }
-    }
-    return promiseChain;
-}, _Gaxios_applyResponseInterceptors = 
-/**
- * Applies the response interceptors. The response interceptors are applied after the
- * call to request is made.
- *
- * @param {GaxiosOptions} options The current set of options.
- *
- * @returns {Promise<GaxiosOptions>} Promise that resolves to the set of options or response after interceptors are applied.
- */
-async function _Gaxios_applyResponseInterceptors(response) {
-    let promiseChain = Promise.resolve(response);
-    for (const interceptor of this.interceptors.response.values()) {
-        if (interceptor) {
-            promiseChain = promiseChain.then(interceptor.resolved, interceptor.rejected);
-        }
-    }
-    return promiseChain;
-}, _Gaxios_prepareRequest = 
-/**
- * Validates the options, merges them with defaults, and prepare request.
- *
- * @param options The original options passed from the client.
- * @returns Prepared options, ready to make a request
- */
-async function _Gaxios_prepareRequest(options) {
-    var _b, _c, _d, _e;
-    const opts = (0, extend_1.default)(true, {}, this.defaults, options);
-    if (!opts.url) {
-        throw new Error('URL is required.');
-    }
-    // baseUrl has been deprecated, remove in 2.0
-    const baseUrl = opts.baseUrl || opts.baseURL;
-    if (baseUrl) {
-        opts.url = baseUrl.toString() + opts.url;
-    }
-    opts.paramsSerializer = opts.paramsSerializer || this.paramsSerializer;
-    if (opts.params && Object.keys(opts.params).length > 0) {
-        let additionalQueryParams = opts.paramsSerializer(opts.params);
-        if (additionalQueryParams.startsWith('?')) {
-            additionalQueryParams = additionalQueryParams.slice(1);
-        }
-        const prefix = opts.url.toString().includes('?') ? '&' : '?';
-        opts.url = opts.url + prefix + additionalQueryParams;
-    }
-    if (typeof options.maxContentLength === 'number') {
-        opts.size = options.maxContentLength;
-    }
-    if (typeof options.maxRedirects === 'number') {
-        opts.follow = options.maxRedirects;
-    }
-    opts.headers = opts.headers || {};
-    if (opts.multipart === undefined && opts.data) {
-        const isFormData = typeof FormData === 'undefined'
-            ? false
-            : (opts === null || opts === void 0 ? void 0 : opts.data) instanceof FormData;
-        if (is_stream_1.default.readable(opts.data)) {
-            opts.body = opts.data;
-        }
-        else if (hasBuffer() && Buffer.isBuffer(opts.data)) {
-            // Do not attempt to JSON.stringify() a Buffer:
-            opts.body = opts.data;
-            if (!hasHeader(opts, 'Content-Type')) {
-                opts.headers['Content-Type'] = 'application/json';
-            }
-        }
-        else if (typeof opts.data === 'object') {
-            // If www-form-urlencoded content type has been set, but data is
-            // provided as an object, serialize the content using querystring:
-            if (!isFormData) {
-                if (getHeader(opts, 'content-type') ===
-                    'application/x-www-form-urlencoded') {
-                    opts.body = opts.paramsSerializer(opts.data);
-                }
-                else {
-                    // } else if (!(opts.data instanceof FormData)) {
-                    if (!hasHeader(opts, 'Content-Type')) {
-                        opts.headers['Content-Type'] = 'application/json';
-                    }
-                    opts.body = JSON.stringify(opts.data);
-                }
-            }
-        }
-        else {
-            opts.body = opts.data;
-        }
-    }
-    else if (opts.multipart && opts.multipart.length > 0) {
-        // note: once the minimum version reaches Node 16,
-        // this can be replaced with randomUUID() function from crypto
-        // and the dependency on UUID removed
-        const boundary = (0, uuid_1.v4)();
-        opts.headers['Content-Type'] = `multipart/related; boundary=${boundary}`;
-        const bodyStream = new stream_1.PassThrough();
-        opts.body = bodyStream;
-        (0, stream_1.pipeline)(this.getMultipartRequest(opts.multipart, boundary), bodyStream, () => { });
-    }
-    opts.validateStatus = opts.validateStatus || this.validateStatus;
-    opts.responseType = opts.responseType || 'unknown';
-    if (!opts.headers['Accept'] && opts.responseType === 'json') {
-        opts.headers['Accept'] = 'application/json';
-    }
-    opts.method = opts.method || 'GET';
-    const proxy = opts.proxy ||
-        ((_b = process === null || process === void 0 ? void 0 : process.env) === null || _b === void 0 ? void 0 : _b.HTTPS_PROXY) ||
-        ((_c = process === null || process === void 0 ? void 0 : process.env) === null || _c === void 0 ? void 0 : _c.https_proxy) ||
-        ((_d = process === null || process === void 0 ? void 0 : process.env) === null || _d === void 0 ? void 0 : _d.HTTP_PROXY) ||
-        ((_e = process === null || process === void 0 ? void 0 : process.env) === null || _e === void 0 ? void 0 : _e.http_proxy);
-    const urlMayUseProxy = __classPrivateFieldGet(this, _Gaxios_instances, "m", _Gaxios_urlMayUseProxy).call(this, opts.url, opts.noProxy);
-    if (opts.agent) {
-        // don't do any of the following options - use the user-provided agent.
-    }
-    else if (proxy && urlMayUseProxy) {
-        const HttpsProxyAgent = await __classPrivateFieldGet(_a, _a, "m", _Gaxios_getProxyAgent).call(_a);
-        if (this.agentCache.has(proxy)) {
-            opts.agent = this.agentCache.get(proxy);
-        }
-        else {
-            opts.agent = new HttpsProxyAgent(proxy, {
-                cert: opts.cert,
-                key: opts.key,
-            });
-            this.agentCache.set(proxy, opts.agent);
-        }
-    }
-    else if (opts.cert && opts.key) {
-        // Configure client for mTLS
-        if (this.agentCache.has(opts.key)) {
-            opts.agent = this.agentCache.get(opts.key);
-        }
-        else {
-            opts.agent = new https_1.Agent({
-                cert: opts.cert,
-                key: opts.key,
-            });
-            this.agentCache.set(opts.key, opts.agent);
-        }
-    }
-    if (typeof opts.errorRedactor !== 'function' &&
-        opts.errorRedactor !== false) {
-        opts.errorRedactor = common_1.defaultErrorRedactor;
-    }
-    return opts;
-}, _Gaxios_getProxyAgent = async function _Gaxios_getProxyAgent() {
-    __classPrivateFieldSet(this, _a, __classPrivateFieldGet(this, _a, "f", _Gaxios_proxyAgent) || (await Promise.resolve().then(() => __importStar(__nccwpck_require__(77219)))).HttpsProxyAgent, "f", _Gaxios_proxyAgent);
-    return __classPrivateFieldGet(this, _a, "f", _Gaxios_proxyAgent);
-};
-/**
- * A cache for the lazily-loaded proxy agent.
- *
- * Should use {@link Gaxios[#getProxyAgent]} to retrieve.
- */
-// using `import` to dynamically import the types here
-_Gaxios_proxyAgent = { value: void 0 };
 //# sourceMappingURL=gaxios.js.map
 
 /***/ }),
 
 /***/ 59555:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -89904,28 +89771,12 @@ _Gaxios_proxyAgent = { value: void 0 };
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.instance = exports.Gaxios = exports.GaxiosError = void 0;
-exports.request = request;
+exports.request = exports.instance = exports.Gaxios = exports.GaxiosError = void 0;
 const gaxios_1 = __nccwpck_require__(28133);
 Object.defineProperty(exports, "Gaxios", ({ enumerable: true, get: function () { return gaxios_1.Gaxios; } }));
 var common_1 = __nccwpck_require__(66129);
 Object.defineProperty(exports, "GaxiosError", ({ enumerable: true, get: function () { return common_1.GaxiosError; } }));
-__exportStar(__nccwpck_require__(14309), exports);
 /**
  * The default instance used when the `request` method is directly
  * invoked.
@@ -89938,36 +89789,8 @@ exports.instance = new gaxios_1.Gaxios();
 async function request(opts) {
     return exports.instance.request(opts);
 }
+exports.request = request;
 //# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 14309:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-// Copyright 2024 Google LLC
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GaxiosInterceptorManager = void 0;
-/**
- * Class to manage collections of GaxiosInterceptors for both requests and responses.
- */
-class GaxiosInterceptorManager extends Set {
-}
-exports.GaxiosInterceptorManager = GaxiosInterceptorManager;
-//# sourceMappingURL=interceptor.js.map
 
 /***/ }),
 
@@ -89989,8 +89812,9 @@ exports.GaxiosInterceptorManager = GaxiosInterceptorManager;
 // See the License for the specific language governing permissions and
 // limitations under the License.
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRetryConfig = getRetryConfig;
+exports.getRetryConfig = void 0;
 async function getRetryConfig(err) {
+    var _a;
     let config = getConfig(err);
     if (!err || !err.config || (!config && !err.config.retry)) {
         return { shouldRetry: false };
@@ -90010,18 +89834,6 @@ async function getRetryConfig(err) {
         config.noResponseRetries === undefined || config.noResponseRetries === null
             ? 2
             : config.noResponseRetries;
-    config.retryDelayMultiplier = config.retryDelayMultiplier
-        ? config.retryDelayMultiplier
-        : 2;
-    config.timeOfFirstRequest = config.timeOfFirstRequest
-        ? config.timeOfFirstRequest
-        : Date.now();
-    config.totalTimeout = config.totalTimeout
-        ? config.totalTimeout
-        : Number.MAX_SAFE_INTEGER;
-    config.maxRetryDelay = config.maxRetryDelay
-        ? config.maxRetryDelay
-        : Number.MAX_SAFE_INTEGER;
     // If this wasn't in the list of status codes where we want
     // to automatically retry, return.
     const retryRanges = [
@@ -90030,11 +89842,9 @@ async function getRetryConfig(err) {
         // 2xx - Do not retry (Success)
         // 3xx - Do not retry (Redirect)
         // 4xx - Do not retry (Client errors)
-        // 408 - Retry ("Request Timeout")
         // 429 - Retry ("Too Many Requests")
         // 5xx - Retry (Server errors)
         [100, 199],
-        [408, 408],
         [429, 429],
         [500, 599],
     ];
@@ -90046,7 +89856,11 @@ async function getRetryConfig(err) {
     if (!(await shouldRetryFn(err))) {
         return { shouldRetry: false, config: err.config };
     }
-    const delay = getNextRetryDelay(config);
+    // Calculate time to wait with exponential backoff.
+    // If this is the first retry, look for a configured retryDelay.
+    const retryDelay = config.currentRetryAttempt ? 0 : (_a = config.retryDelay) !== null && _a !== void 0 ? _a : 100;
+    // Formula: retryDelay + ((2^c - 1 / 2) * 1000)
+    const delay = retryDelay + ((Math.pow(2, config.currentRetryAttempt) - 1) / 2) * 1000;
     // We're going to retry!  Incremenent the counter.
     err.config.retryConfig.currentRetryAttempt += 1;
     // Create a promise that invokes the retry after the backOffDelay
@@ -90063,6 +89877,7 @@ async function getRetryConfig(err) {
     await backoff;
     return { shouldRetry: true, config: err.config };
 }
+exports.getRetryConfig = getRetryConfig;
 /**
  * Determine based on config if we should retry the request.
  * @param err The GaxiosError passed to the interceptor.
@@ -90121,25 +89936,6 @@ function getConfig(err) {
     }
     return;
 }
-/**
- * Gets the delay to wait before the next retry.
- *
- * @param {RetryConfig} config The current set of retry options
- * @returns {number} the amount of ms to wait before the next retry attempt.
- */
-function getNextRetryDelay(config) {
-    var _a;
-    // Calculate time to wait with exponential backoff.
-    // If this is the first retry, look for a configured retryDelay.
-    const retryDelay = config.currentRetryAttempt ? 0 : (_a = config.retryDelay) !== null && _a !== void 0 ? _a : 100;
-    // Formula: retryDelay + ((retryDelayMultiplier^currentRetryAttempt - 1 / 2) * 1000)
-    const calculatedDelay = retryDelay +
-        ((Math.pow(config.retryDelayMultiplier, config.currentRetryAttempt) - 1) /
-            2) *
-            1000;
-    const maxAllowableDelay = config.totalTimeout - (Date.now() - config.timeOfFirstRequest);
-    return Math.min(calculatedDelay, maxAllowableDelay, config.maxRetryDelay);
-}
 //# sourceMappingURL=retry.js.map
 
 /***/ }),
@@ -90165,687 +89961,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.pkg = void 0;
 exports.pkg = __nccwpck_require__(6318);
 //# sourceMappingURL=util.js.map
-
-/***/ }),
-
-/***/ 19694:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-Object.defineProperty(exports, "NIL", ({
-  enumerable: true,
-  get: function () {
-    return _nil.default;
-  }
-}));
-Object.defineProperty(exports, "parse", ({
-  enumerable: true,
-  get: function () {
-    return _parse.default;
-  }
-}));
-Object.defineProperty(exports, "stringify", ({
-  enumerable: true,
-  get: function () {
-    return _stringify.default;
-  }
-}));
-Object.defineProperty(exports, "v1", ({
-  enumerable: true,
-  get: function () {
-    return _v.default;
-  }
-}));
-Object.defineProperty(exports, "v3", ({
-  enumerable: true,
-  get: function () {
-    return _v2.default;
-  }
-}));
-Object.defineProperty(exports, "v4", ({
-  enumerable: true,
-  get: function () {
-    return _v3.default;
-  }
-}));
-Object.defineProperty(exports, "v5", ({
-  enumerable: true,
-  get: function () {
-    return _v4.default;
-  }
-}));
-Object.defineProperty(exports, "validate", ({
-  enumerable: true,
-  get: function () {
-    return _validate.default;
-  }
-}));
-Object.defineProperty(exports, "version", ({
-  enumerable: true,
-  get: function () {
-    return _version.default;
-  }
-}));
-
-var _v = _interopRequireDefault(__nccwpck_require__(94625));
-
-var _v2 = _interopRequireDefault(__nccwpck_require__(93951));
-
-var _v3 = _interopRequireDefault(__nccwpck_require__(52507));
-
-var _v4 = _interopRequireDefault(__nccwpck_require__(18457));
-
-var _nil = _interopRequireDefault(__nccwpck_require__(27298));
-
-var _version = _interopRequireDefault(__nccwpck_require__(40278));
-
-var _validate = _interopRequireDefault(__nccwpck_require__(75559));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(52956));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(55558));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-
-/***/ 12484:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('md5').update(bytes).digest();
-}
-
-var _default = md5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 53513:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var _default = {
-  randomUUID: _crypto.default.randomUUID
-};
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 27298:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = '00000000-0000-0000-0000-000000000000';
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 55558:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(75559));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function parse(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  let v;
-  const arr = new Uint8Array(16); // Parse ########-....-....-....-............
-
-  arr[0] = (v = parseInt(uuid.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 0xff;
-  arr[2] = v >>> 8 & 0xff;
-  arr[3] = v & 0xff; // Parse ........-####-....-....-............
-
-  arr[4] = (v = parseInt(uuid.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 0xff; // Parse ........-....-####-....-............
-
-  arr[6] = (v = parseInt(uuid.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 0xff; // Parse ........-....-....-####-............
-
-  arr[8] = (v = parseInt(uuid.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 0xff; // Parse ........-....-....-....-############
-  // (Use "/" to avoid 32-bit truncation when bit-shifting high-order bytes)
-
-  arr[10] = (v = parseInt(uuid.slice(24, 36), 16)) / 0x10000000000 & 0xff;
-  arr[11] = v / 0x100000000 & 0xff;
-  arr[12] = v >>> 24 & 0xff;
-  arr[13] = v >>> 16 & 0xff;
-  arr[14] = v >>> 8 & 0xff;
-  arr[15] = v & 0xff;
-  return arr;
-}
-
-var _default = parse;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 23894:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 27440:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = rng;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rnds8Pool = new Uint8Array(256); // # of random values to pre-allocate
-
-let poolPtr = rnds8Pool.length;
-
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    _crypto.default.randomFillSync(rnds8Pool);
-
-    poolPtr = 0;
-  }
-
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-/***/ }),
-
-/***/ 45682:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6113));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('sha1').update(bytes).digest();
-}
-
-var _default = sha1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 52956:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-exports.unsafeStringify = unsafeStringify;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(75559));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-const byteToHex = [];
-
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).slice(1));
-}
-
-function unsafeStringify(arr, offset = 0) {
-  // Note: Be careful editing this code!  It's been tuned for performance
-  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-  return byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]];
-}
-
-function stringify(arr, offset = 0) {
-  const uuid = unsafeStringify(arr, offset); // Consistency check for valid UUID.  If this throws, it's likely due to one
-  // of the following:
-  // - One or more input array values don't map to a hex octet (leading to
-  // "undefined" in the uuid)
-  // - Invalid input values for the RFC `version` or `variant` fields
-
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Stringified UUID is invalid');
-  }
-
-  return uuid;
-}
-
-var _default = stringify;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 94625:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(27440));
-
-var _stringify = __nccwpck_require__(52956);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// **`v1()` - Generate time-based UUID**
-//
-// Inspired by https://github.com/LiosK/UUID.js
-// and http://docs.python.org/library/uuid.html
-let _nodeId;
-
-let _clockseq; // Previous uuid creation time
-
-
-let _lastMSecs = 0;
-let _lastNSecs = 0; // See https://github.com/uuidjs/uuid for API details
-
-function v1(options, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options = options || {};
-  let node = options.node || _nodeId;
-  let clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq; // node and clockseq need to be initialized to random values if they're not
-  // specified.  We do this lazily to minimize issues related to insufficient
-  // system entropy.  See #189
-
-  if (node == null || clockseq == null) {
-    const seedBytes = options.random || (options.rng || _rng.default)();
-
-    if (node == null) {
-      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-      node = _nodeId = [seedBytes[0] | 0x01, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-
-    if (clockseq == null) {
-      // Per 4.2.2, randomize (14 bit) clockseq
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
-    }
-  } // UUID timestamps are 100 nano-second units since the Gregorian epoch,
-  // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
-  // time is handled internally as 'msecs' (integer milliseconds) and 'nsecs'
-  // (100-nanoseconds offset from msecs) since unix epoch, 1970-01-01 00:00.
-
-
-  let msecs = options.msecs !== undefined ? options.msecs : Date.now(); // Per 4.2.1.2, use count of uuid's generated during the current clock
-  // cycle to simulate higher resolution clock
-
-  let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1; // Time since last uuid creation (in msecs)
-
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 10000; // Per 4.2.1.2, Bump clockseq on clock regression
-
-  if (dt < 0 && options.clockseq === undefined) {
-    clockseq = clockseq + 1 & 0x3fff;
-  } // Reset nsecs if clock regresses (new clockseq) or we've moved onto a new
-  // time interval
-
-
-  if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-    nsecs = 0;
-  } // Per 4.2.1.2 Throw error if too many uuids are requested
-
-
-  if (nsecs >= 10000) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq; // Per 4.1.4 - Convert from unix epoch to Gregorian epoch
-
-  msecs += 12219292800000; // `time_low`
-
-  const tl = ((msecs & 0xfffffff) * 10000 + nsecs) % 0x100000000;
-  b[i++] = tl >>> 24 & 0xff;
-  b[i++] = tl >>> 16 & 0xff;
-  b[i++] = tl >>> 8 & 0xff;
-  b[i++] = tl & 0xff; // `time_mid`
-
-  const tmh = msecs / 0x100000000 * 10000 & 0xfffffff;
-  b[i++] = tmh >>> 8 & 0xff;
-  b[i++] = tmh & 0xff; // `time_high_and_version`
-
-  b[i++] = tmh >>> 24 & 0xf | 0x10; // include version
-
-  b[i++] = tmh >>> 16 & 0xff; // `clock_seq_hi_and_reserved` (Per 4.2.2 - include variant)
-
-  b[i++] = clockseq >>> 8 | 0x80; // `clock_seq_low`
-
-  b[i++] = clockseq & 0xff; // `node`
-
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-
-  return buf || (0, _stringify.unsafeStringify)(b);
-}
-
-var _default = v1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 93951:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(64313));
-
-var _md = _interopRequireDefault(__nccwpck_require__(12484));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v3 = (0, _v.default)('v3', 0x30, _md.default);
-var _default = v3;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 64313:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.URL = exports.DNS = void 0;
-exports["default"] = v35;
-
-var _stringify = __nccwpck_require__(52956);
-
-var _parse = _interopRequireDefault(__nccwpck_require__(55558));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function stringToBytes(str) {
-  str = unescape(encodeURIComponent(str)); // UTF8 escape
-
-  const bytes = [];
-
-  for (let i = 0; i < str.length; ++i) {
-    bytes.push(str.charCodeAt(i));
-  }
-
-  return bytes;
-}
-
-const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-exports.DNS = DNS;
-const URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-exports.URL = URL;
-
-function v35(name, version, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    var _namespace;
-
-    if (typeof value === 'string') {
-      value = stringToBytes(value);
-    }
-
-    if (typeof namespace === 'string') {
-      namespace = (0, _parse.default)(namespace);
-    }
-
-    if (((_namespace = namespace) === null || _namespace === void 0 ? void 0 : _namespace.length) !== 16) {
-      throw TypeError('Namespace must be array-like (16 iterable integer values, 0-255)');
-    } // Compute hash of namespace and value, Per 4.3
-    // Future: Use spread syntax when supported on all platforms, e.g. `bytes =
-    // hashfunc([...namespace, ... value])`
-
-
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 0x0f | version;
-    bytes[8] = bytes[8] & 0x3f | 0x80;
-
-    if (buf) {
-      offset = offset || 0;
-
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-
-      return buf;
-    }
-
-    return (0, _stringify.unsafeStringify)(bytes);
-  } // Function#name is not settable on some platforms (#270)
-
-
-  try {
-    generateUUID.name = name; // eslint-disable-next-line no-empty
-  } catch (err) {} // For CommonJS default export support
-
-
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL;
-  return generateUUID;
-}
-
-/***/ }),
-
-/***/ 52507:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _native = _interopRequireDefault(__nccwpck_require__(53513));
-
-var _rng = _interopRequireDefault(__nccwpck_require__(27440));
-
-var _stringify = __nccwpck_require__(52956);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function v4(options, buf, offset) {
-  if (_native.default.randomUUID && !buf && !options) {
-    return _native.default.randomUUID();
-  }
-
-  options = options || {};
-
-  const rnds = options.random || (options.rng || _rng.default)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
-
-  rnds[6] = rnds[6] & 0x0f | 0x40;
-  rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
-  if (buf) {
-    offset = offset || 0;
-
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-
-    return buf;
-  }
-
-  return (0, _stringify.unsafeStringify)(rnds);
-}
-
-var _default = v4;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 18457:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(64313));
-
-var _sha = _interopRequireDefault(__nccwpck_require__(45682));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v5 = (0, _v.default)('v5', 0x50, _sha.default);
-var _default = v5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 75559:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _regex = _interopRequireDefault(__nccwpck_require__(23894));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function validate(uuid) {
-  return typeof uuid === 'string' && _regex.default.test(uuid);
-}
-
-var _default = validate;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 40278:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(75559));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function version(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  return parseInt(uuid.slice(14, 15), 16);
-}
-
-var _default = version;
-exports["default"] = _default;
 
 /***/ }),
 
@@ -202014,7 +201129,7 @@ module.exports = JSON.parse('{"name":"@google-cloud/storage","description":"Clou
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"gaxios","version":"6.7.1","description":"A simple common HTTP client specifically for Google APIs and services.","main":"build/src/index.js","types":"build/src/index.d.ts","files":["build/src"],"scripts":{"lint":"gts check","test":"c8 mocha build/test","presystem-test":"npm run compile","system-test":"mocha build/system-test --timeout 80000","compile":"tsc -p .","fix":"gts fix","prepare":"npm run compile","pretest":"npm run compile","webpack":"webpack","prebrowser-test":"npm run compile","browser-test":"node build/browser-test/browser-test-runner.js","docs":"compodoc src/","docs-test":"linkinator docs","predocs-test":"npm run docs","samples-test":"cd samples/ && npm link ../ && npm test && cd ../","prelint":"cd samples; npm link ../; npm install","clean":"gts clean","precompile":"gts clean"},"repository":"googleapis/gaxios","keywords":["google"],"engines":{"node":">=14"},"author":"Google, LLC","license":"Apache-2.0","devDependencies":{"@babel/plugin-proposal-private-methods":"^7.18.6","@compodoc/compodoc":"1.1.19","@types/cors":"^2.8.6","@types/express":"^4.16.1","@types/extend":"^3.0.1","@types/mocha":"^9.0.0","@types/multiparty":"0.0.36","@types/mv":"^2.1.0","@types/ncp":"^2.0.1","@types/node":"^20.0.0","@types/node-fetch":"^2.5.7","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/uuid":"^10.0.0","abort-controller":"^3.0.0","assert":"^2.0.0","browserify":"^17.0.0","c8":"^8.0.0","cheerio":"1.0.0-rc.10","cors":"^2.8.5","execa":"^5.0.0","express":"^4.16.4","form-data":"^4.0.0","gts":"^5.0.0","is-docker":"^2.0.0","karma":"^6.0.0","karma-chrome-launcher":"^3.0.0","karma-coverage":"^2.0.0","karma-firefox-launcher":"^2.0.0","karma-mocha":"^2.0.0","karma-remap-coverage":"^0.1.5","karma-sourcemap-loader":"^0.4.0","karma-webpack":"5.0.0","linkinator":"^3.0.0","mocha":"^8.0.0","multiparty":"^4.2.1","mv":"^2.1.1","ncp":"^2.0.0","nock":"^13.0.0","null-loader":"^4.0.0","puppeteer":"^19.0.0","sinon":"^18.0.0","stream-browserify":"^3.0.0","tmp":"0.2.3","ts-loader":"^8.0.0","typescript":"^5.1.6","webpack":"^5.35.0","webpack-cli":"^4.0.0"},"dependencies":{"extend":"^3.0.2","https-proxy-agent":"^7.0.1","is-stream":"^2.0.0","node-fetch":"^2.6.9","uuid":"^9.0.1"}}');
+module.exports = JSON.parse('{"name":"gaxios","version":"6.3.0","description":"A simple common HTTP client specifically for Google APIs and services.","main":"build/src/index.js","types":"build/src/index.d.ts","files":["build/src"],"scripts":{"lint":"gts check","test":"c8 mocha build/test","presystem-test":"npm run compile","system-test":"mocha build/system-test --timeout 80000","compile":"tsc -p .","fix":"gts fix","prepare":"npm run compile","pretest":"npm run compile","webpack":"webpack","prebrowser-test":"npm run compile","browser-test":"node build/browser-test/browser-test-runner.js","docs":"compodoc src/","docs-test":"linkinator docs","predocs-test":"npm run docs","samples-test":"cd samples/ && npm link ../ && npm test && cd ../","prelint":"cd samples; npm link ../; npm install","clean":"gts clean","precompile":"gts clean"},"repository":"googleapis/gaxios","keywords":["google"],"engines":{"node":">=14"},"author":"Google, LLC","license":"Apache-2.0","devDependencies":{"@babel/plugin-proposal-private-methods":"^7.18.6","@compodoc/compodoc":"^1.1.9","@types/cors":"^2.8.6","@types/express":"^4.16.1","@types/extend":"^3.0.1","@types/mocha":"^9.0.0","@types/multiparty":"0.0.36","@types/mv":"^2.1.0","@types/ncp":"^2.0.1","@types/node":"^20.0.0","@types/node-fetch":"^2.5.7","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/uuid":"^9.0.0","abort-controller":"^3.0.0","assert":"^2.0.0","browserify":"^17.0.0","c8":"^8.0.0","cors":"^2.8.5","execa":"^5.0.0","express":"^4.16.4","form-data":"^4.0.0","gts":"^5.0.0","is-docker":"^2.0.0","karma":"^6.0.0","karma-chrome-launcher":"^3.0.0","karma-coverage":"^2.0.0","karma-firefox-launcher":"^2.0.0","karma-mocha":"^2.0.0","karma-remap-coverage":"^0.1.5","karma-sourcemap-loader":"^0.4.0","karma-webpack":"^5.0.0","linkinator":"^4.0.0","mocha":"^8.0.0","multiparty":"^4.2.1","mv":"^2.1.1","ncp":"^2.0.0","nock":"^13.0.0","null-loader":"^4.0.0","puppeteer":"^21.0.0","sinon":"^17.0.0","stream-browserify":"^3.0.0","tmp":"0.2.1","ts-loader":"^8.0.0","typescript":"^5.1.6","uuid":"^9.0.0","webpack":"^5.35.0","webpack-cli":"^4.0.0"},"dependencies":{"extend":"^3.0.2","https-proxy-agent":"^7.0.1","is-stream":"^2.0.0","node-fetch":"^2.6.9"}}');
 
 /***/ }),
 
