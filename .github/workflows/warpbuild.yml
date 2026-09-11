@@ -1,6 +1,6 @@
-name: buildjet
+name: warpbuild
 
-on: 
+on:
   push:
     branches: ["main"]
   pull_request:
@@ -9,13 +9,13 @@ on:
 permissions: {}
 
 jobs:
-  buildjet:
+  warpbuild:
     strategy:
       fail-fast: false
       matrix:
         os: ${{ github.actor == 'dependabot[bot]' && fromJSON('["ubuntu-latest"]') || fromJSON('["ubuntu-latest", "macos-latest", "windows-latest"]') }}
 
-    name: Test buildjet provider on ${{ matrix.os }}
+    name: Test warpbuild provider on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
     env:
@@ -36,7 +36,7 @@ jobs:
       - uses: ./
         with:
           workspaces: tests
-          cache-provider: buildjet
+          cache-provider: warpbuild
 
       - run: |
           cargo check

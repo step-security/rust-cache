@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "rust-cache",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "description": "A GitHub Action that implements smart caching for rust/cargo projects with sensible defaults.",
   "keywords": [
     "actions",
@@ -17,24 +17,32 @@
     "url": "https://github.com/step-security/rust-cache/issues"
   },
   "homepage": "https://github.com/step-security/rust-cache#readme",
+  "type": "module",
   "dependencies": {
-    "@actions/buildjet-cache": "npm:github-actions.cache-buildjet@0.2.0",
-    "@actions/warpbuild-cache": "npm:github-actions.warp-cache@^1.4.5",
-    "@actions/cache": "^6.0.0",
-    "@actions/core": "^3.0.0",
+    "@actions/cache": "^6.2.0",
+    "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
-    "@actions/glob": "^0.6.1",
+    "@actions/glob": "^0.7.0",
     "@actions/io": "^3.0.2",
-    "axios": "^1.6.2",
-    "smol-toml": "^1.6.0"
+    "@actions/warpbuild-cache": "npm:github-actions.warp-cache@1.4.7",
+    "smol-toml": "^1.7.1",
+    "axios": "^1.20.0"
+  },
+  "overrides": {
+    "@actions/cache": {
+      "@actions/glob": "$@actions/glob"
+    }
   },
   "devDependencies": {
-    "@types/node": "^25.4.0",
-    "@vercel/ncc": "^0.38.1",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/node": "^26.1.2",
     "linefix": "^0.1.1",
-    "typescript": "5.4.3"
+    "rollup": "^4.62.4",
+    "typescript": "7.0.2"
   },
   "scripts": {
-    "build": "ncc build --target es2020 -o dist/restore src/restore.ts && ncc build --target es2020 -o dist/save src/save.ts && linefix dist"
+    "build": "tsc && rollup --config .build/rollup.config.js"
   }
 }
