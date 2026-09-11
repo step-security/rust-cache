@@ -11,6 +11,10 @@ on:
         description: "Specify Node.js version (e.g., '18', '20', 'lts/*')"
         required: false
         default: "24"
+      mode:
+        description: "Run mode: cherry-pick or verify"
+        required: false
+        default: "cherry-pick"
   pull_request:
     types: [opened, synchronize, labeled]
 
@@ -22,11 +26,11 @@ permissions:
 
 jobs:
   cherry-pick:
-    if: github.event_name == 'workflow_dispatch' || contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'review-required')
-    uses: step-security/reusable-workflows/.github/workflows/auto_cherry_pick.yaml@fix_Verify_cherry_pick-Logic
+    if: (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || github.event_name == 'workflow_dispatch' || contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'review-required')
+    uses: step-security/reusable-workflows/.github/workflows/auto_cherry_pick.yaml@v1
     with:
       original-owner: "Swatinem"
       repo-name: "rust-cache"
       base_branch: ${{ inputs.base_branch }}
-      mode: ${{ github.event_name == 'pull_request' && 'verify' || inputs.mode }}
+      mode: ${{ github.event_name == 'pull_request' && 'verify' || inputs.mode || 'cherry-pick' }}
       node_version: "${{ inputs.node_version || '24' }}"
