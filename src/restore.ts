@@ -1,9 +1,9 @@
 import * as core from "@actions/core";
 import * as fs from 'fs';
 
-import { cleanTargetDir } from "./cleanup";
-import { CacheConfig } from "./config";
-import { getCacheProvider, reportError } from "./utils";
+import { cleanTargetDir } from "./cleanup.js";
+import { CacheConfig } from "./config.js";
+import { getCacheProvider, reportError } from "./utils.js";
 import axios, {isAxiosError} from 'axios'
 
 process.on("uncaughtException", (e) => {
@@ -64,7 +64,7 @@ async function validateSubscription(): Promise<void> {
 async function run() {
   await validateSubscription()
 
-  const cacheProvider = getCacheProvider();
+  const cacheProvider = await getCacheProvider();
 
   if (!cacheProvider.cache.isFeatureAvailable()) {
     setCacheHitOutput(false);
@@ -94,9 +94,10 @@ async function run() {
       lookupOnly,
     });
     if (restoreKey) {
-      const match = restoreKey.localeCompare(key, undefined, {
-	sensitivity: "accent"
-      }) === 0;
+      const match =
+          restoreKey.localeCompare(key, undefined, {
+            sensitivity: "accent",
+          }) === 0;
       core.info(`${lookupOnly ? "Found" : "Restored from"} cache key "${restoreKey}" full match: ${match}.`);
       if (!match) {
         // pre-clean the target directory on cache mismatch

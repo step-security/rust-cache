@@ -1,23 +1,30 @@
 import * as core from "@actions/core";
 import path from "path";
 
-import { getCmdOutput } from "./utils";
+import { getCmdOutput } from "./utils.js";
 
-const SAVE_TARGETS = new Set(["lib", "proc-macro"]);
+const SAVE_TARGETS = new Set(["lib", "cdylib", "dylib", "rlib", "staticlib", "proc-macro"]);
 
 export class Workspace {
-  constructor(public root: string, public target: string) {}
+  constructor(
+      public root: string,
+      public target: string,
+  ) {}
 
-  async getPackages(cmdFormat: string, filter: (p: Meta["packages"][0]) => boolean, extraArgs?: string): Promise<Packages> {
+  async getPackages(
+      cmdFormat: string,
+      filter: (p: Meta["packages"][0]) => boolean,
+      extraArgs?: string,
+  ): Promise<Packages> {
     const cmd = "cargo metadata --all-features --format-version 1" + (extraArgs ? ` ${extraArgs}` : "");
     let packages: Packages = [];
     try {
       core.debug(`collecting metadata for "${this.root}"`);
       const meta: Meta = JSON.parse(
-        await getCmdOutput(cmdFormat, cmd, {
-          cwd: this.root,
-          env: { ...process.env, "CARGO_ENCODED_RUSTFLAGS": "" },
-        }),
+          await getCmdOutput(cmdFormat, cmd, {
+            cwd: this.root,
+            env: { ...process.env, CARGO_ENCODED_RUSTFLAGS: "" },
+          }),
       );
       core.debug(`workspace "${this.root}" has ${meta.packages.length} packages`);
       for (const pkg of meta.packages.filter(filter)) {

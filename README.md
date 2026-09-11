@@ -8,7 +8,7 @@ sensible defaults.
 ## Example usage
 
 ```yaml
-- uses: actions/checkout@v5
+- uses: actions/checkout@v7
 
 # selecting a toolchain either by action or manual `rustup` calls should happen
 # before the plugin, as the cache uses the current rustc version as its cache key
@@ -34,7 +34,7 @@ sensible defaults.
     # default: "true"
     add-job-id-key: ""
 
-    # Weather the a hash of the rust environment should be included in the cache key.
+    # Whether the a hash of the rust environment should be included in the cache key.
     # This includes a hash of all Cargo.toml/Cargo.lock files, rust-toolchain files,
     # and .cargo/config.toml files (if present), as well as the specified 'env-vars'.
     # default: "true"
@@ -94,7 +94,7 @@ sensible defaults.
     lookup-only: ""
 
     # Specifies what to use as the backend providing cache
-    # Can be set to "github", "buildjet", or "warpbuild"
+    # Can be set to "github", or "warpbuild"
     # default: "github"
     cache-provider: ""
 
@@ -144,7 +144,7 @@ This action currently caches the following files/directories:
 This cache is automatically keyed by:
 
 - the github [`job_id`](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_id)
-(if `add-job-id-key` is `"true"`),
+  (if `add-job-id-key` is `"true"`),
 - the rustc release / host / hash (for all installed toolchains when
   available),
 - the following values, if `add-rust-environment-hash-key` is `"true"`:
@@ -212,5 +212,5 @@ to see those details as well as further details related to caching operations.
 - The cache cleaning process currently removes all the files from `~/.cargo/bin`
   that were present before the action ran (for example `rustc`), by default.
   This can be an issue on long-running self-hosted runners, where such state
-  is expected to be preserved across runs.  You can work around this by setting
+  is expected to be preserved across runs. You can work around this by setting
   `cache-bin: "false"`.

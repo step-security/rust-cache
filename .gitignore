@@ -6,3 +6,4 @@ target/
 
 # Mac
 .DS_Store
+.build

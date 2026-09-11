@@ -3,9 +3,9 @@ import * as io from "@actions/io";
 import fs from "fs";
 import path from "path";
 
-import { CARGO_HOME } from "./config";
-import { exists } from "./utils";
-import { Packages } from "./workspace";
+import { CARGO_HOME } from "./config.js";
+import { exists } from "./utils.js";
+import { Packages } from "./workspace.js";
 
 export async function cleanTargetDir(targetDir: string, packages: Packages, checkTimestamp = false) {
   core.debug(`cleaning target directory "${targetDir}"`);
@@ -15,15 +15,19 @@ export async function cleanTargetDir(targetDir: string, packages: Packages, chec
   for await (const dirent of dir) {
     if (dirent.isDirectory()) {
       let dirName = path.join(dir.path, dirent.name);
-      // is it a profile dir, or a nested target dir?
-      let isNestedTarget =
-        (await exists(path.join(dirName, "CACHEDIR.TAG"))) || (await exists(path.join(dirName, ".rustc_info.json")));
+      // Target-triple directories do not contain Cargo's target directory
+      // markers, so identify profiles by their artifact directories as well.
+      const isProfile =
+          dirent.name === "tests" ||
+          (await exists(path.join(dirName, "build"))) ||
+          (await exists(path.join(dirName, ".fingerprint"))) ||
+          (await exists(path.join(dirName, "deps")));
 
       try {
-        if (isNestedTarget) {
-          await cleanTargetDir(dirName, packages, checkTimestamp);
-        } else {
+        if (isProfile) {
           await cleanProfileTarget(dirName, packages, checkTimestamp);
+        } else {
+          await cleanTargetDir(dirName, packages, checkTimestamp);
         }
       } catch {}
     } else if (dirent.name !== "CACHEDIR.TAG") {
@@ -42,11 +46,11 @@ async function cleanProfileTarget(profileDir: string, packages: Packages, checkT
     try {
       // https://github.com/vertexclique/kaos/blob/9876f6c890339741cc5be4b7cb9df72baa5a6d79/src/cargo.rs#L25
       // https://github.com/eupn/macrotest/blob/c4151a5f9f545942f4971980b5d264ebcd0b1d11/src/cargo.rs#L27
-      cleanTargetDir(path.join(profileDir, "target"), packages, checkTimestamp);
+      await cleanTargetDir(path.join(profileDir, "target"), packages, checkTimestamp);
     } catch {}
     try {
       // https://github.com/dtolnay/trybuild/blob/eec8ca6cb9b8f53d0caf1aa499d99df52cae8b40/src/cargo.rs#L50
-      cleanTargetDir(path.join(profileDir, "trybuild"), packages, checkTimestamp);
+      await cleanTargetDir(path.join(profileDir, "trybuild"), packages, checkTimestamp);
     } catch {}
 
     // Delete everything else.
@@ -58,7 +62,7 @@ async function cleanProfileTarget(profileDir: string, packages: Packages, checkT
   let keepProfile = new Set(["build", ".fingerprint", "deps"]);
   await rmExcept(profileDir, keepProfile);
 
-  const keepPkg = new Set(packages.map((p) => p.name));
+  const keepPkg = new Set(packages.flatMap((p) => [p.name, ...p.targets.map((t) => t.replace(/-/g, "_"))]));
   await rmExcept(path.join(profileDir, "build"), keepPkg, checkTimestamp);
   await rmExcept(path.join(profileDir, ".fingerprint"), keepPkg, checkTimestamp);
 
@@ -75,21 +79,6 @@ async function cleanProfileTarget(profileDir: string, packages: Packages, checkT
   await rmExcept(path.join(profileDir, "deps"), keepDeps, checkTimestamp);
 }
 
-export async function getCargoBins(): Promise<Set<string>> {
-  const bins = new Set<string>();
-  try {
-    const { installs }: { installs: { [key: string]: { bins: Array<string> } } } = JSON.parse(
-      await fs.promises.readFile(path.join(CARGO_HOME, ".crates2.json"), "utf8"),
-    );
-    for (const pkg of Object.values(installs)) {
-      for (const bin of pkg.bins) {
-        bins.add(bin);
-      }
-    }
-  } catch {}
-  return bins;
-}
-
 /**
  * Clean the cargo bin directory, removing the binaries that existed
  * when the action started, as they were not created by the build.
@@ -97,15 +86,11 @@ export async function getCargoBins(): Promise<Set<string>> {
  * @param oldBins The binaries that existed when the action started.
  */
 export async function cleanBin(oldBins: Array<string>) {
-  const bins = await getCargoBins();
-
-  for (const bin of oldBins) {
-    bins.delete(bin);
-  }
+  const binsToRemove = new Set<string>(oldBins);
 
   const dir = await fs.promises.opendir(path.join(CARGO_HOME, "bin"));
   for await (const dirent of dir) {
-    if (dirent.isFile() && !bins.has(dirent.name)) {
+    if (dirent.isFile() && binsToRemove.has(dirent.name)) {
       await rm(dir.path, dirent);
     }
   }
@@ -114,7 +99,7 @@ export async function cleanBin(oldBins: Array<string>) {
 export async function cleanRegistry(packages: Packages, crates = true) {
   // remove `.cargo/credentials.toml`
   try {
-    const credentials = path.join(CARGO_HOME, ".cargo", "credentials.toml");
+    const credentials = path.join(CARGO_HOME, "credentials.toml");
     core.debug(`deleting "${credentials}"`);
     await fs.promises.unlink(credentials);
   } catch {}
@@ -264,6 +249,12 @@ const ONE_WEEK = 7 * 24 * 3600 * 1000;
  * Otherwise, it will remove everything that does not match any string in the
  * `keepPrefix` set.
  * The matching strips and trailing `-$hash` suffix.
+ *
+ * Cargo's newer `build-dir` layout (rust-lang/cargo#17258) nests the hash as
+ * a subdirectory instead of appending it, so entries there are bare package
+ * names with no suffix to strip. Check for an exact match first so those
+ * names (which may themselves contain hyphens) aren't mistaken for a
+ * `<name>-<hash>` entry from the old layout and truncated incorrectly.
  */
 async function rmExcept(dirName: string, keepPrefix: Set<string>, checkTimestamp = false) {
   const dir = await fs.promises.opendir(dirName);
@@ -281,14 +272,21 @@ async function rmExcept(dirName: string, keepPrefix: Set<string>, checkTimestamp
 
     let name = dirent.name;
 
-    // strip the trailing hash
-    const idx = name.lastIndexOf("-");
-    if (idx !== -1) {
-      name = name.slice(0, idx);
-    }
+    // in Cargo's V1 layout, all packages are suffixed by their hash.
+    // in V2, all package hashes are subdirectories instead.
+    // Check both possible naming standards for packages and accept either.
 
+    // v2 package format
     if (!keepPrefix.has(name)) {
-      await rm(dir.path, dirent);
+      // now check for v1 package format
+      // strip the trailing hash
+      const idx = name.lastIndexOf("-");
+      if (idx !== -1) {
+        name = name.slice(0, idx);
+      }
+      if (!keepPrefix.has(name)) {
+        await rm(dir.path, dirent);
+      }
     }
   }
 }
