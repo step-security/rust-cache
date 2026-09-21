@@ -18,3 +18,35 @@ reason = "undici: WebSocket client exception; action does not use WebSockets"
 [[IgnoredVulns]]
 id = "GHSA-4992-7rv2-5pvq"
 reason = "undici: CRLF injection via upgrade option; not used by @actions/github or @actions/http-client"
+
+[[IgnoredVulns]]
+id = "GHSA-35p6-xmwp-9g52"
+reason = "undici: transitive dependency via @actions/github or @actions/http-client; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-8xcm-r25x-g524"
+reason = "undici: transitive dependency via @actions/github or @actions/http-client; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-g8m3-5g58-fq7m"
+reason = "undici: transitive dependency via @actions/github or @actions/http-client; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-m8rv-5g2x-5cg5"
+reason = "undici: transitive dependency via @actions/github or @actions/http-client; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-p88m-4jfj-68fv"
+reason = "undici: transitive dependency via @actions/github or @actions/http-client; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-v3r7-h72x-cjcm"
+reason = "undici: transitive dependency via @actions/github or @actions/http-client; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-vxpw-j846-p89q"
+reason = "undici: transitive dependency via @actions/github or @actions/http-client; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-w5hq-g745-h8pq"
+reason = "uuid: transitive dependency via @actions/warpbuild-cache, @azure/ms-rest-js, and teeny-request; not directly used"

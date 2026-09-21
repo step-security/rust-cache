@@ -53,5 +53,53 @@ id = "RUSTSEC-2026-0098"
 reason = "It is a a test dependency"
 
 [[IgnoredVulns]]
-id = "RUSTSEC-2026-0099" 
+id = "RUSTSEC-2026-0099"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0258"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-8c75-8mhr-p7r9"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-ghm9-cr32-g9qj"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-hppc-g8h3-xhp3"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-phqj-4mhp-q6mq"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-pqf5-4pqq-29f5"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-xmgf-hq76-4vx2"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-xp3w-r5p5-63rr"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-xv59-967r-8726"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0285"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0104"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "GHSA-82j2-j2ch-gfr8"
 reason = "It is a a test dependency"
