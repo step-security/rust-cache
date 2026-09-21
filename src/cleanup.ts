@@ -79,21 +79,6 @@ async function cleanProfileTarget(profileDir: string, packages: Packages, checkT
   await rmExcept(path.join(profileDir, "deps"), keepDeps, checkTimestamp);
 }
 
-export async function getCargoBins(): Promise<Set<string>> {
-  const bins = new Set<string>();
-
-  try {
-    const dir = await fs.promises.opendir(path.join(CARGO_HOME, "bin"));
-    for await (const dirent of dir) {
-      if (dirent.isFile()) {
-        bins.add(dirent.name);
-      }
-    }
-  } catch {}
-
-  return bins;
-}
-
 /**
  * Clean the cargo bin directory, removing the binaries that existed
  * when the action started, as they were not created by the build.
