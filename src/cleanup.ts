@@ -46,11 +46,11 @@ async function cleanProfileTarget(profileDir: string, packages: Packages, checkT
     try {
       // https://github.com/vertexclique/kaos/blob/9876f6c890339741cc5be4b7cb9df72baa5a6d79/src/cargo.rs#L25
       // https://github.com/eupn/macrotest/blob/c4151a5f9f545942f4971980b5d264ebcd0b1d11/src/cargo.rs#L27
-      cleanTargetDir(path.join(profileDir, "target"), packages, checkTimestamp);
+      await cleanTargetDir(path.join(profileDir, "target"), packages, checkTimestamp);
     } catch {}
     try {
       // https://github.com/dtolnay/trybuild/blob/eec8ca6cb9b8f53d0caf1aa499d99df52cae8b40/src/cargo.rs#L50
-      cleanTargetDir(path.join(profileDir, "trybuild"), packages, checkTimestamp);
+      await cleanTargetDir(path.join(profileDir, "trybuild"), packages, checkTimestamp);
     } catch {}
 
     // Delete everything else.
@@ -243,8 +243,9 @@ const ONE_WEEK = 7 * 24 * 3600 * 1000;
 /**
  * Removes all files or directories in `dirName` matching some criteria.
  *
- * When the `checkTimestamp` flag is set, this will also remove anything older
- * than one week.
+ * These two modes are mutually exclusive. When the `checkTimestamp` flag is
+ * set, this will remove anything older than one week and `keepPrefix` is
+ * ignored.
  *
  * Otherwise, it will remove everything that does not match any string in the
  * `keepPrefix` set.
@@ -267,7 +268,7 @@ async function rmExcept(dirName: string, keepPrefix: Set<string>, checkTimestamp
       if (isOutdated) {
         await rm(dir.path, dirent);
       }
-      return;
+      continue;
     }
 
     let name = dirent.name;

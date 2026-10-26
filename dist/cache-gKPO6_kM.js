@@ -1,13 +1,8 @@
-import { h as debug, g as getDefaultExportFromCjs, n as mkdirP, m as exec, w as which, o as commonjsGlobal, t as tunnelExports, p as warning, i as info, q as isDebug, u as setSecret, e as error } from './cleanup-BtFCJ68u.js';
+import { h as debug, n as mkdirP, o as create, m as exec, w as which, p as commonjsGlobal, t as tunnelExports, q as warning, i as info, u as isDebug, v as setSecret, x as rmRF, e as error } from './cleanup-BGGN43KH.js';
 import * as path from 'path';
+import * as crypto$1 from 'crypto';
 import * as fs from 'fs';
 import { writeFileSync, existsSync } from 'fs';
-import assert$1 from 'assert';
-import * as os from 'os';
-import { r as requireMinimatch, a as requireDist, b as requireDist$1, c as requireState, d as requireState$1 } from './state-Bs067o4F.js';
-import * as crypto$1 from 'crypto';
-import * as stream from 'stream';
-import { Readable } from 'stream';
 import * as util$8 from 'util';
 import * as http from 'http';
 import * as https from 'https';
@@ -33,865 +28,24 @@ import require$$5$3 from 'string_decoder';
 import { URL as URL$1 } from 'url';
 import * as require$$0$1 from 'buffer';
 import { Buffer as Buffer$1 } from 'buffer';
-import os$1, { EOL as EOL$1 } from 'node:os';
+import os, { EOL as EOL$1 } from 'node:os';
 import process$1 from 'node:process';
 import https$1 from 'node:https';
+import { r as requireDist, a as requireDist$1, b as requireState, c as requireState$1 } from './state-DJwXECn6.js';
+import * as stream from 'stream';
+import { Readable } from 'stream';
 import { createHmac } from 'node:crypto';
 import { EventEmitter } from 'events';
 import fs$1 from 'node:fs';
+import 'os';
 import 'net';
 import 'tls';
+import 'assert';
 import 'child_process';
 import 'timers';
 import 'fs/promises';
 import './index-7LN3rhJP.js';
 import 'tty';
-
-/**
- * Returns a copy with defaults filled in.
- */
-function getOptions(copy) {
-    const result = {
-        followSymbolicLinks: true,
-        implicitDescendants: true,
-        matchDirectories: true,
-        omitBrokenSymbolicLinks: true,
-        excludeHiddenFiles: false
-    };
-    if (copy) {
-        if (typeof copy.followSymbolicLinks === 'boolean') {
-            result.followSymbolicLinks = copy.followSymbolicLinks;
-            debug(`followSymbolicLinks '${result.followSymbolicLinks}'`);
-        }
-        if (typeof copy.implicitDescendants === 'boolean') {
-            result.implicitDescendants = copy.implicitDescendants;
-            debug(`implicitDescendants '${result.implicitDescendants}'`);
-        }
-        if (typeof copy.matchDirectories === 'boolean') {
-            result.matchDirectories = copy.matchDirectories;
-            debug(`matchDirectories '${result.matchDirectories}'`);
-        }
-        if (typeof copy.omitBrokenSymbolicLinks === 'boolean') {
-            result.omitBrokenSymbolicLinks = copy.omitBrokenSymbolicLinks;
-            debug(`omitBrokenSymbolicLinks '${result.omitBrokenSymbolicLinks}'`);
-        }
-        if (typeof copy.excludeHiddenFiles === 'boolean') {
-            result.excludeHiddenFiles = copy.excludeHiddenFiles;
-            debug(`excludeHiddenFiles '${result.excludeHiddenFiles}'`);
-        }
-    }
-    return result;
-}
-
-const IS_WINDOWS$5 = process.platform === 'win32';
-/**
- * Similar to path.dirname except normalizes the path separators and slightly better handling for Windows UNC paths.
- *
- * For example, on Linux/macOS:
- * - `/               => /`
- * - `/hello          => /`
- *
- * For example, on Windows:
- * - `C:\             => C:\`
- * - `C:\hello        => C:\`
- * - `C:              => C:`
- * - `C:hello         => C:`
- * - `\               => \`
- * - `\hello          => \`
- * - `\\hello         => \\hello`
- * - `\\hello\world   => \\hello\world`
- */
-function dirname(p) {
-    // Normalize slashes and trim unnecessary trailing slash
-    p = safeTrimTrailingSeparator(p);
-    // Windows UNC root, e.g. \\hello or \\hello\world
-    if (IS_WINDOWS$5 && /^\\\\[^\\]+(\\[^\\]+)?$/.test(p)) {
-        return p;
-    }
-    // Get dirname
-    let result = path.dirname(p);
-    // Trim trailing slash for Windows UNC root, e.g. \\hello\world\
-    if (IS_WINDOWS$5 && /^\\\\[^\\]+\\[^\\]+\\$/.test(result)) {
-        result = safeTrimTrailingSeparator(result);
-    }
-    return result;
-}
-/**
- * Roots the path if not already rooted. On Windows, relative roots like `\`
- * or `C:` are expanded based on the current working directory.
- */
-function ensureAbsoluteRoot(root, itemPath) {
-    assert$1(root, `ensureAbsoluteRoot parameter 'root' must not be empty`);
-    assert$1(itemPath, `ensureAbsoluteRoot parameter 'itemPath' must not be empty`);
-    // Already rooted
-    if (hasAbsoluteRoot(itemPath)) {
-        return itemPath;
-    }
-    // Windows
-    if (IS_WINDOWS$5) {
-        // Check for itemPath like C: or C:foo
-        if (itemPath.match(/^[A-Z]:[^\\/]|^[A-Z]:$/i)) {
-            let cwd = process.cwd();
-            assert$1(cwd.match(/^[A-Z]:\\/i), `Expected current directory to start with an absolute drive root. Actual '${cwd}'`);
-            // Drive letter matches cwd? Expand to cwd
-            if (itemPath[0].toUpperCase() === cwd[0].toUpperCase()) {
-                // Drive only, e.g. C:
-                if (itemPath.length === 2) {
-                    // Preserve specified drive letter case (upper or lower)
-                    return `${itemPath[0]}:\\${cwd.substr(3)}`;
-                }
-                // Drive + path, e.g. C:foo
-                else {
-                    if (!cwd.endsWith('\\')) {
-                        cwd += '\\';
-                    }
-                    // Preserve specified drive letter case (upper or lower)
-                    return `${itemPath[0]}:\\${cwd.substr(3)}${itemPath.substr(2)}`;
-                }
-            }
-            // Different drive
-            else {
-                return `${itemPath[0]}:\\${itemPath.substr(2)}`;
-            }
-        }
-        // Check for itemPath like \ or \foo
-        else if (normalizeSeparators(itemPath).match(/^\\$|^\\[^\\]/)) {
-            const cwd = process.cwd();
-            assert$1(cwd.match(/^[A-Z]:\\/i), `Expected current directory to start with an absolute drive root. Actual '${cwd}'`);
-            return `${cwd[0]}:\\${itemPath.substr(1)}`;
-        }
-    }
-    assert$1(hasAbsoluteRoot(root), `ensureAbsoluteRoot parameter 'root' must have an absolute root`);
-    // Otherwise ensure root ends with a separator
-    if (root.endsWith('/') || (IS_WINDOWS$5 && root.endsWith('\\'))) ;
-    else {
-        // Append separator
-        root += path.sep;
-    }
-    return root + itemPath;
-}
-/**
- * On Linux/macOS, true if path starts with `/`. On Windows, true for paths like:
- * `\\hello\share` and `C:\hello` (and using alternate separator).
- */
-function hasAbsoluteRoot(itemPath) {
-    assert$1(itemPath, `hasAbsoluteRoot parameter 'itemPath' must not be empty`);
-    // Normalize separators
-    itemPath = normalizeSeparators(itemPath);
-    // Windows
-    if (IS_WINDOWS$5) {
-        // E.g. \\hello\share or C:\hello
-        return itemPath.startsWith('\\\\') || /^[A-Z]:\\/i.test(itemPath);
-    }
-    // E.g. /hello
-    return itemPath.startsWith('/');
-}
-/**
- * On Linux/macOS, true if path starts with `/`. On Windows, true for paths like:
- * `\`, `\hello`, `\\hello\share`, `C:`, and `C:\hello` (and using alternate separator).
- */
-function hasRoot(itemPath) {
-    assert$1(itemPath, `isRooted parameter 'itemPath' must not be empty`);
-    // Normalize separators
-    itemPath = normalizeSeparators(itemPath);
-    // Windows
-    if (IS_WINDOWS$5) {
-        // E.g. \ or \hello or \\hello
-        // E.g. C: or C:\hello
-        return itemPath.startsWith('\\') || /^[A-Z]:/i.test(itemPath);
-    }
-    // E.g. /hello
-    return itemPath.startsWith('/');
-}
-/**
- * Removes redundant slashes and converts `/` to `\` on Windows
- */
-function normalizeSeparators(p) {
-    p = p || '';
-    // Windows
-    if (IS_WINDOWS$5) {
-        // Convert slashes on Windows
-        p = p.replace(/\//g, '\\');
-        // Remove redundant slashes
-        const isUnc = /^\\\\+[^\\]/.test(p); // e.g. \\hello
-        return (isUnc ? '\\' : '') + p.replace(/\\\\+/g, '\\'); // preserve leading \\ for UNC
-    }
-    // Remove redundant slashes
-    return p.replace(/\/\/+/g, '/');
-}
-/**
- * Normalizes the path separators and trims the trailing separator (when safe).
- * For example, `/foo/ => /foo` but `/ => /`
- */
-function safeTrimTrailingSeparator(p) {
-    // Short-circuit if empty
-    if (!p) {
-        return '';
-    }
-    // Normalize separators
-    p = normalizeSeparators(p);
-    // No trailing slash
-    if (!p.endsWith(path.sep)) {
-        return p;
-    }
-    // Check '/' on Linux/macOS and '\' on Windows
-    if (p === path.sep) {
-        return p;
-    }
-    // On Windows check if drive root. E.g. C:\
-    if (IS_WINDOWS$5 && /^[A-Z]:\\$/i.test(p)) {
-        return p;
-    }
-    // Otherwise trim trailing slash
-    return p.substr(0, p.length - 1);
-}
-
-/**
- * Indicates whether a pattern matches a path
- */
-var MatchKind;
-(function (MatchKind) {
-    /** Not matched */
-    MatchKind[MatchKind["None"] = 0] = "None";
-    /** Matched if the path is a directory */
-    MatchKind[MatchKind["Directory"] = 1] = "Directory";
-    /** Matched if the path is a regular file */
-    MatchKind[MatchKind["File"] = 2] = "File";
-    /** Matched */
-    MatchKind[MatchKind["All"] = 3] = "All";
-})(MatchKind || (MatchKind = {}));
-
-const IS_WINDOWS$4 = process.platform === 'win32';
-/**
- * Given an array of patterns, returns an array of paths to search.
- * Duplicates and paths under other included paths are filtered out.
- */
-function getSearchPaths(patterns) {
-    // Ignore negate patterns
-    patterns = patterns.filter(x => !x.negate);
-    // Create a map of all search paths
-    const searchPathMap = {};
-    for (const pattern of patterns) {
-        const key = IS_WINDOWS$4
-            ? pattern.searchPath.toUpperCase()
-            : pattern.searchPath;
-        searchPathMap[key] = 'candidate';
-    }
-    const result = [];
-    for (const pattern of patterns) {
-        // Check if already included
-        const key = IS_WINDOWS$4
-            ? pattern.searchPath.toUpperCase()
-            : pattern.searchPath;
-        if (searchPathMap[key] === 'included') {
-            continue;
-        }
-        // Check for an ancestor search path
-        let foundAncestor = false;
-        let tempKey = key;
-        let parent = dirname(tempKey);
-        while (parent !== tempKey) {
-            if (searchPathMap[parent]) {
-                foundAncestor = true;
-                break;
-            }
-            tempKey = parent;
-            parent = dirname(tempKey);
-        }
-        // Include the search pattern in the result
-        if (!foundAncestor) {
-            result.push(pattern.searchPath);
-            searchPathMap[key] = 'included';
-        }
-    }
-    return result;
-}
-/**
- * Matches the patterns against the path
- */
-function match(patterns, itemPath) {
-    let result = MatchKind.None;
-    for (const pattern of patterns) {
-        if (pattern.negate) {
-            result &= ~pattern.match(itemPath);
-        }
-        else {
-            result |= pattern.match(itemPath);
-        }
-    }
-    return result;
-}
-/**
- * Checks whether to descend further into the directory
- */
-function partialMatch(patterns, itemPath) {
-    return patterns.some(x => !x.negate && x.partialMatch(itemPath));
-}
-
-var minimatchExports = requireMinimatch();
-var minimatch = /*@__PURE__*/getDefaultExportFromCjs(minimatchExports);
-
-const IS_WINDOWS$3 = process.platform === 'win32';
-/**
- * Helper class for parsing paths into segments
- */
-class Path {
-    /**
-     * Constructs a Path
-     * @param itemPath Path or array of segments
-     */
-    constructor(itemPath) {
-        this.segments = [];
-        // String
-        if (typeof itemPath === 'string') {
-            assert$1(itemPath, `Parameter 'itemPath' must not be empty`);
-            // Normalize slashes and trim unnecessary trailing slash
-            itemPath = safeTrimTrailingSeparator(itemPath);
-            // Not rooted
-            if (!hasRoot(itemPath)) {
-                this.segments = itemPath.split(path.sep);
-            }
-            // Rooted
-            else {
-                // Add all segments, while not at the root
-                let remaining = itemPath;
-                let dir = dirname(remaining);
-                while (dir !== remaining) {
-                    // Add the segment
-                    const basename = path.basename(remaining);
-                    this.segments.unshift(basename);
-                    // Truncate the last segment
-                    remaining = dir;
-                    dir = dirname(remaining);
-                }
-                // Remainder is the root
-                this.segments.unshift(remaining);
-            }
-        }
-        // Array
-        else {
-            // Must not be empty
-            assert$1(itemPath.length > 0, `Parameter 'itemPath' must not be an empty array`);
-            // Each segment
-            for (let i = 0; i < itemPath.length; i++) {
-                let segment = itemPath[i];
-                // Must not be empty
-                assert$1(segment, `Parameter 'itemPath' must not contain any empty segments`);
-                // Normalize slashes
-                segment = normalizeSeparators(itemPath[i]);
-                // Root segment
-                if (i === 0 && hasRoot(segment)) {
-                    segment = safeTrimTrailingSeparator(segment);
-                    assert$1(segment === dirname(segment), `Parameter 'itemPath' root segment contains information for multiple segments`);
-                    this.segments.push(segment);
-                }
-                // All other segments
-                else {
-                    // Must not contain slash
-                    assert$1(!segment.includes(path.sep), `Parameter 'itemPath' contains unexpected path separators`);
-                    this.segments.push(segment);
-                }
-            }
-        }
-    }
-    /**
-     * Converts the path to it's string representation
-     */
-    toString() {
-        // First segment
-        let result = this.segments[0];
-        // All others
-        let skipSlash = result.endsWith(path.sep) || (IS_WINDOWS$3 && /^[A-Z]:$/i.test(result));
-        for (let i = 1; i < this.segments.length; i++) {
-            if (skipSlash) {
-                skipSlash = false;
-            }
-            else {
-                result += path.sep;
-            }
-            result += this.segments[i];
-        }
-        return result;
-    }
-}
-
-const { Minimatch } = minimatch;
-const IS_WINDOWS$2 = process.platform === 'win32';
-class Pattern {
-    constructor(patternOrNegate, isImplicitPattern = false, segments, homedir) {
-        /**
-         * Indicates whether matches should be excluded from the result set
-         */
-        this.negate = false;
-        // Pattern overload
-        let pattern;
-        if (typeof patternOrNegate === 'string') {
-            pattern = patternOrNegate.trim();
-        }
-        // Segments overload
-        else {
-            // Convert to pattern
-            segments = segments || [];
-            assert$1(segments.length, `Parameter 'segments' must not empty`);
-            const root = Pattern.getLiteral(segments[0]);
-            assert$1(root && hasAbsoluteRoot(root), `Parameter 'segments' first element must be a root path`);
-            pattern = new Path(segments).toString().trim();
-            if (patternOrNegate) {
-                pattern = `!${pattern}`;
-            }
-        }
-        // Negate
-        while (pattern.startsWith('!')) {
-            this.negate = !this.negate;
-            pattern = pattern.substr(1).trim();
-        }
-        // Normalize slashes and ensures absolute root
-        pattern = Pattern.fixupPattern(pattern, homedir);
-        // Segments
-        this.segments = new Path(pattern).segments;
-        // Trailing slash indicates the pattern should only match directories, not regular files
-        this.trailingSeparator = normalizeSeparators(pattern)
-            .endsWith(path.sep);
-        pattern = safeTrimTrailingSeparator(pattern);
-        // Search path (literal path prior to the first glob segment)
-        let foundGlob = false;
-        const searchSegments = this.segments
-            .map(x => Pattern.getLiteral(x))
-            .filter(x => !foundGlob && !(foundGlob = x === ''));
-        this.searchPath = new Path(searchSegments).toString();
-        // Root RegExp (required when determining partial match)
-        this.rootRegExp = new RegExp(Pattern.regExpEscape(searchSegments[0]), IS_WINDOWS$2 ? 'i' : '');
-        this.isImplicitPattern = isImplicitPattern;
-        // Create minimatch
-        const minimatchOptions = {
-            dot: true,
-            nobrace: true,
-            nocase: IS_WINDOWS$2,
-            nocomment: true,
-            noext: true,
-            nonegate: true
-        };
-        pattern = IS_WINDOWS$2 ? pattern.replace(/\\/g, '/') : pattern;
-        this.minimatch = new Minimatch(pattern, minimatchOptions);
-    }
-    /**
-     * Matches the pattern against the specified path
-     */
-    match(itemPath) {
-        // Last segment is globstar?
-        if (this.segments[this.segments.length - 1] === '**') {
-            // Normalize slashes
-            itemPath = normalizeSeparators(itemPath);
-            // Append a trailing slash. Otherwise Minimatch will not match the directory immediately
-            // preceding the globstar. For example, given the pattern `/foo/**`, Minimatch returns
-            // false for `/foo` but returns true for `/foo/`. Append a trailing slash to handle that quirk.
-            if (!itemPath.endsWith(path.sep) && this.isImplicitPattern === false) {
-                // Note, this is safe because the constructor ensures the pattern has an absolute root.
-                // For example, formats like C: and C:foo on Windows are resolved to an absolute root.
-                itemPath = `${itemPath}${path.sep}`;
-            }
-        }
-        else {
-            // Normalize slashes and trim unnecessary trailing slash
-            itemPath = safeTrimTrailingSeparator(itemPath);
-        }
-        // Match
-        if (this.minimatch.match(itemPath)) {
-            return this.trailingSeparator ? MatchKind.Directory : MatchKind.All;
-        }
-        return MatchKind.None;
-    }
-    /**
-     * Indicates whether the pattern may match descendants of the specified path
-     */
-    partialMatch(itemPath) {
-        // Normalize slashes and trim unnecessary trailing slash
-        itemPath = safeTrimTrailingSeparator(itemPath);
-        // matchOne does not handle root path correctly
-        if (dirname(itemPath) === itemPath) {
-            return this.rootRegExp.test(itemPath);
-        }
-        return this.minimatch.matchOne(itemPath.split(IS_WINDOWS$2 ? /\\+/ : /\/+/), this.minimatch.set[0], true);
-    }
-    /**
-     * Escapes glob patterns within a path
-     */
-    static globEscape(s) {
-        return (IS_WINDOWS$2 ? s : s.replace(/\\/g, '\\\\')) // escape '\' on Linux/macOS
-            .replace(/(\[)(?=[^/]+\])/g, '[[]') // escape '[' when ']' follows within the path segment
-            .replace(/\?/g, '[?]') // escape '?'
-            .replace(/\*/g, '[*]'); // escape '*'
-    }
-    /**
-     * Normalizes slashes and ensures absolute root
-     */
-    static fixupPattern(pattern, homedir) {
-        // Empty
-        assert$1(pattern, 'pattern cannot be empty');
-        // Must not contain `.` segment, unless first segment
-        // Must not contain `..` segment
-        const literalSegments = new Path(pattern).segments.map(x => Pattern.getLiteral(x));
-        assert$1(literalSegments.every((x, i) => (x !== '.' || i === 0) && x !== '..'), `Invalid pattern '${pattern}'. Relative pathing '.' and '..' is not allowed.`);
-        // Must not contain globs in root, e.g. Windows UNC path \\foo\b*r
-        assert$1(!hasRoot(pattern) || literalSegments[0], `Invalid pattern '${pattern}'. Root segment must not contain globs.`);
-        // Normalize slashes
-        pattern = normalizeSeparators(pattern);
-        // Replace leading `.` segment
-        if (pattern === '.' || pattern.startsWith(`.${path.sep}`)) {
-            pattern = Pattern.globEscape(process.cwd()) + pattern.substr(1);
-        }
-        // Replace leading `~` segment
-        else if (pattern === '~' || pattern.startsWith(`~${path.sep}`)) {
-            homedir = homedir || os.homedir();
-            assert$1(homedir, 'Unable to determine HOME directory');
-            assert$1(hasAbsoluteRoot(homedir), `Expected HOME directory to be a rooted path. Actual '${homedir}'`);
-            pattern = Pattern.globEscape(homedir) + pattern.substr(1);
-        }
-        // Replace relative drive root, e.g. pattern is C: or C:foo
-        else if (IS_WINDOWS$2 &&
-            (pattern.match(/^[A-Z]:$/i) || pattern.match(/^[A-Z]:[^\\]/i))) {
-            let root = ensureAbsoluteRoot('C:\\dummy-root', pattern.substr(0, 2));
-            if (pattern.length > 2 && !root.endsWith('\\')) {
-                root += '\\';
-            }
-            pattern = Pattern.globEscape(root) + pattern.substr(2);
-        }
-        // Replace relative root, e.g. pattern is \ or \foo
-        else if (IS_WINDOWS$2 && (pattern === '\\' || pattern.match(/^\\[^\\]/))) {
-            let root = ensureAbsoluteRoot('C:\\dummy-root', '\\');
-            if (!root.endsWith('\\')) {
-                root += '\\';
-            }
-            pattern = Pattern.globEscape(root) + pattern.substr(1);
-        }
-        // Otherwise ensure absolute root
-        else {
-            pattern = ensureAbsoluteRoot(Pattern.globEscape(process.cwd()), pattern);
-        }
-        return normalizeSeparators(pattern);
-    }
-    /**
-     * Attempts to unescape a pattern segment to create a literal path segment.
-     * Otherwise returns empty string.
-     */
-    static getLiteral(segment) {
-        let literal = '';
-        for (let i = 0; i < segment.length; i++) {
-            const c = segment[i];
-            // Escape
-            if (c === '\\' && !IS_WINDOWS$2 && i + 1 < segment.length) {
-                literal += segment[++i];
-                continue;
-            }
-            // Wildcard
-            else if (c === '*' || c === '?') {
-                return '';
-            }
-            // Character set
-            else if (c === '[' && i + 1 < segment.length) {
-                let set = '';
-                let closed = -1;
-                for (let i2 = i + 1; i2 < segment.length; i2++) {
-                    const c2 = segment[i2];
-                    // Escape
-                    if (c2 === '\\' && !IS_WINDOWS$2 && i2 + 1 < segment.length) {
-                        set += segment[++i2];
-                        continue;
-                    }
-                    // Closed
-                    else if (c2 === ']') {
-                        closed = i2;
-                        break;
-                    }
-                    // Otherwise
-                    else {
-                        set += c2;
-                    }
-                }
-                // Closed?
-                if (closed >= 0) {
-                    // Cannot convert
-                    if (set.length > 1) {
-                        return '';
-                    }
-                    // Convert to literal
-                    if (set) {
-                        literal += set;
-                        i = closed;
-                        continue;
-                    }
-                }
-                // Otherwise fall thru
-            }
-            // Append
-            literal += c;
-        }
-        return literal;
-    }
-    /**
-     * Escapes regexp special characters
-     * https://javascript.info/regexp-escaping
-     */
-    static regExpEscape(s) {
-        return s.replace(/[[\\^$.|?*+()]/g, '\\$&');
-    }
-}
-
-class SearchState {
-    constructor(path, level) {
-        this.path = path;
-        this.level = level;
-    }
-}
-
-var __awaiter$b = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __asyncValues$1 = (undefined && undefined.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
-var __await = (undefined && undefined.__await) || function (v) { return this instanceof __await ? (this.v = v, this) : new __await(v); };
-var __asyncGenerator = (undefined && undefined.__asyncGenerator) || function (thisArg, _arguments, generator) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var g = generator.apply(thisArg, _arguments || []), i, q = [];
-    return i = Object.create((typeof AsyncIterator === "function" ? AsyncIterator : Object).prototype), verb("next"), verb("throw"), verb("return", awaitReturn), i[Symbol.asyncIterator] = function () { return this; }, i;
-    function awaitReturn(f) { return function (v) { return Promise.resolve(v).then(f, reject); }; }
-    function verb(n, f) { if (g[n]) { i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; if (f) i[n] = f(i[n]); } }
-    function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
-    function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r); }
-    function fulfill(value) { resume("next", value); }
-    function reject(value) { resume("throw", value); }
-    function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
-};
-const IS_WINDOWS$1 = process.platform === 'win32';
-class DefaultGlobber {
-    constructor(options) {
-        this.patterns = [];
-        this.searchPaths = [];
-        this.options = getOptions(options);
-    }
-    getSearchPaths() {
-        // Return a copy
-        return this.searchPaths.slice();
-    }
-    glob() {
-        return __awaiter$b(this, void 0, void 0, function* () {
-            var _a, e_1, _b, _c;
-            const result = [];
-            try {
-                for (var _d = true, _e = __asyncValues$1(this.globGenerator()), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
-                    _c = _f.value;
-                    _d = false;
-                    const itemPath = _c;
-                    result.push(itemPath);
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = _e.return)) yield _b.call(_e);
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-            return result;
-        });
-    }
-    globGenerator() {
-        return __asyncGenerator(this, arguments, function* globGenerator_1() {
-            // Fill in defaults options
-            const options = getOptions(this.options);
-            // Implicit descendants?
-            const patterns = [];
-            for (const pattern of this.patterns) {
-                patterns.push(pattern);
-                if (options.implicitDescendants &&
-                    (pattern.trailingSeparator ||
-                        pattern.segments[pattern.segments.length - 1] !== '**')) {
-                    patterns.push(new Pattern(pattern.negate, true, pattern.segments.concat('**')));
-                }
-            }
-            // Push the search paths
-            const stack = [];
-            for (const searchPath of getSearchPaths(patterns)) {
-                debug(`Search path '${searchPath}'`);
-                // Exists?
-                try {
-                    // Intentionally using lstat. Detection for broken symlink
-                    // will be performed later (if following symlinks).
-                    yield __await(fs.promises.lstat(searchPath));
-                }
-                catch (err) {
-                    if (err.code === 'ENOENT') {
-                        continue;
-                    }
-                    throw err;
-                }
-                stack.unshift(new SearchState(searchPath, 1));
-            }
-            // Search
-            const traversalChain = []; // used to detect cycles
-            while (stack.length) {
-                // Pop
-                const item = stack.pop();
-                // Match?
-                const match$1 = match(patterns, item.path);
-                const partialMatch$1 = !!match$1 || partialMatch(patterns, item.path);
-                if (!match$1 && !partialMatch$1) {
-                    continue;
-                }
-                // Stat
-                const stats = yield __await(DefaultGlobber.stat(item, options, traversalChain)
-                // Broken symlink, or symlink cycle detected, or no longer exists
-                );
-                // Broken symlink, or symlink cycle detected, or no longer exists
-                if (!stats) {
-                    continue;
-                }
-                // Hidden file or directory?
-                if (options.excludeHiddenFiles && path.basename(item.path).match(/^\./)) {
-                    continue;
-                }
-                // Directory
-                if (stats.isDirectory()) {
-                    // Matched
-                    if (match$1 & MatchKind.Directory && options.matchDirectories) {
-                        yield yield __await(item.path);
-                    }
-                    // Descend?
-                    else if (!partialMatch$1) {
-                        continue;
-                    }
-                    // Push the child items in reverse
-                    const childLevel = item.level + 1;
-                    const childItems = (yield __await(fs.promises.readdir(item.path))).map(x => new SearchState(path.join(item.path, x), childLevel));
-                    stack.push(...childItems.reverse());
-                }
-                // File
-                else if (match$1 & MatchKind.File) {
-                    yield yield __await(item.path);
-                }
-            }
-        });
-    }
-    /**
-     * Constructs a DefaultGlobber
-     */
-    static create(patterns, options) {
-        return __awaiter$b(this, void 0, void 0, function* () {
-            const result = new DefaultGlobber(options);
-            if (IS_WINDOWS$1) {
-                patterns = patterns.replace(/\r\n/g, '\n');
-                patterns = patterns.replace(/\r/g, '\n');
-            }
-            const lines = patterns.split('\n').map(x => x.trim());
-            for (const line of lines) {
-                // Empty or comment
-                if (!line || line.startsWith('#')) {
-                    continue;
-                }
-                // Pattern
-                else {
-                    result.patterns.push(new Pattern(line));
-                }
-            }
-            result.searchPaths.push(...getSearchPaths(result.patterns));
-            return result;
-        });
-    }
-    static stat(item, options, traversalChain) {
-        return __awaiter$b(this, void 0, void 0, function* () {
-            // Note:
-            // `stat` returns info about the target of a symlink (or symlink chain)
-            // `lstat` returns info about a symlink itself
-            let stats;
-            if (options.followSymbolicLinks) {
-                try {
-                    // Use `stat` (following symlinks)
-                    stats = yield fs.promises.stat(item.path);
-                }
-                catch (err) {
-                    if (err.code === 'ENOENT') {
-                        if (options.omitBrokenSymbolicLinks) {
-                            debug(`Broken symlink '${item.path}'`);
-                            return undefined;
-                        }
-                        throw new Error(`No information found for the path '${item.path}'. This may indicate a broken symbolic link.`);
-                    }
-                    throw err;
-                }
-            }
-            else {
-                // Use `lstat` (not following symlinks)
-                stats = yield fs.promises.lstat(item.path);
-            }
-            // Note, isDirectory() returns false for the lstat of a symlink
-            if (stats.isDirectory() && options.followSymbolicLinks) {
-                // Get the realpath
-                const realPath = yield fs.promises.realpath(item.path);
-                // Fixup the traversal chain to match the item level
-                while (traversalChain.length >= item.level) {
-                    traversalChain.pop();
-                }
-                // Test for a cycle
-                if (traversalChain.some((x) => x === realPath)) {
-                    debug(`Symlink cycle detected for path '${item.path}' and realpath '${realPath}'`);
-                    return undefined;
-                }
-                // Update the traversal chain
-                traversalChain.push(realPath);
-            }
-            return stats;
-        });
-    }
-}
-
-(undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-(undefined && undefined.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
-
-var __awaiter$a = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-/**
- * Constructs a globber
- *
- * @param patterns  Patterns separated by newlines
- * @param options   Glob options
- */
-function create(patterns, options) {
-    return __awaiter$a(this, void 0, void 0, function* () {
-        return yield DefaultGlobber.create(patterns, options);
-    });
-}
 
 var re = {exports: {}};
 
@@ -1102,7 +256,7 @@ function requireRe () {
 		createToken('GTLT', '((?:<|>)?=?)');
 
 		// Something like "2.*" or "1.2.x".
-		// Note that "x.x" is a valid xRange identifer, meaning "any version"
+		// Note that "x.x" is a valid xRange identifier, meaning "any version"
 		// Only the first item is strictly required.
 		createToken('XRANGEIDENTIFIERLOOSE', `${src[t.NUMERICIDENTIFIERLOOSE]}|x|X|\\*`);
 		createToken('XRANGEIDENTIFIER', `${src[t.NUMERICIDENTIFIER]}|x|X|\\*`);
@@ -1266,6 +420,22 @@ function requireSemver$1 () {
 
 	const parseOptions = requireParseOptions();
 	const { compareIdentifiers } = requireIdentifiers();
+
+	const isPrereleaseIdentifier = (prerelease, identifier) => {
+	  const identifiers = identifier.split('.');
+	  if (identifiers.length > prerelease.length) {
+	    return false
+	  }
+
+	  for (let i = 0; i < identifiers.length; i++) {
+	    if (compareIdentifiers(prerelease[i], identifiers[i]) !== 0) {
+	      return false
+	    }
+	  }
+
+	  return true
+	};
+
 	class SemVer {
 	  constructor (version, options) {
 	    options = parseOptions(options);
@@ -1569,8 +739,9 @@ function requireSemver$1 () {
 	          if (identifierBase === false) {
 	            prerelease = [identifier];
 	          }
-	          if (compareIdentifiers(this.prerelease[0], identifier) === 0) {
-	            if (isNaN(this.prerelease[1])) {
+	          if (isPrereleaseIdentifier(this.prerelease, identifier)) {
+	            const prereleaseBase = this.prerelease[identifier.split('.').length];
+	            if (isNaN(prereleaseBase)) {
 	              this.prerelease = prerelease;
 	            }
 	          } else {
@@ -2098,6 +1269,62 @@ function requireCoerce () {
 	return coerce_1;
 }
 
+var truncate_1;
+var hasRequiredTruncate;
+
+function requireTruncate () {
+	if (hasRequiredTruncate) return truncate_1;
+	hasRequiredTruncate = 1;
+
+	const parse = requireParse$1();
+	const constants = requireConstants$5();
+	const SemVer = requireSemver$1();
+
+	const truncate = (version, truncation, options) => {
+	  if (!constants.RELEASE_TYPES.includes(truncation)) {
+	    return null
+	  }
+
+	  const clonedVersion = cloneInputVersion(version, options);
+	  return clonedVersion && doTruncation(clonedVersion, truncation)
+	};
+
+	const cloneInputVersion = (version, options) => {
+	  const versionStringToParse = (
+	    version instanceof SemVer ? version.version : version
+	  );
+
+	  return parse(versionStringToParse, options)
+	};
+
+	const doTruncation = (version, truncation) => {
+	  if (isPrerelease(truncation)) {
+	    return version.version
+	  }
+
+	  version.prerelease = [];
+
+	  switch (truncation) {
+	    case 'major':
+	      version.minor = 0;
+	      version.patch = 0;
+	      break
+	    case 'minor':
+	      version.patch = 0;
+	      break
+	  }
+
+	  return version.format()
+	};
+
+	const isPrerelease = (type) => {
+	  return type.startsWith('pre')
+	};
+
+	truncate_1 = truncate;
+	return truncate_1;
+}
+
 var lrucache;
 var hasRequiredLrucache;
 
@@ -2253,6 +1480,9 @@ function requireRange () {
 	  }
 
 	  parseRange (range) {
+	    // strip build metadata so it can't bleed into the version
+	    range = range.replace(BUILDSTRIPRE, '');
+
 	    // memoize range parsing for performance.
 	    // this is a very hot path, and fully deterministic.
 	    const memoOpts =
@@ -2378,12 +1608,16 @@ function requireRange () {
 	const SemVer = requireSemver$1();
 	const {
 	  safeRe: re,
+	  src,
 	  t,
 	  comparatorTrimReplace,
 	  tildeTrimReplace,
 	  caretTrimReplace,
 	} = requireRe();
 	const { FLAG_INCLUDE_PRERELEASE, FLAG_LOOSE } = requireConstants$5();
+
+	// unbounded global build-metadata stripper used by parseRange
+	const BUILDSTRIPRE = new RegExp(src[t.BUILD], 'g');
 
 	const isNullSet = c => c.value === '<0.0.0-0';
 	const isAny = c => c.value === '';
@@ -2425,6 +1659,11 @@ function requireRange () {
 
 	const isX = id => !id || id.toLowerCase() === 'x' || id === '*';
 
+	const invalidXRangeOrder = (M, m, p) => (
+	  (isX(M) && !isX(m)) ||
+	  (isX(m) && p && !isX(p))
+	);
+
 	// ~, ~> --> * (any, kinda silly)
 	// ~2, ~2.x, ~2.x.x, ~>2, ~>2.x ~>2.x.x --> >=2.0.0 <3.0.0-0
 	// ~2.0, ~2.0.x, ~>2.0, ~>2.0.x --> >=2.0.0 <2.1.0-0
@@ -2442,6 +1681,10 @@ function requireRange () {
 
 	const replaceTilde = (comp, options) => {
 	  const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
+	  // if we're including prereleases in the match, then the lower bound is
+	  // -0, the lowest possible prerelease value, just like x-ranges and carets.
+	  // this keeps `~1.2` equivalent to the `1.2.x` x-range it's documented as.
+	  const z = options.includePrerelease ? '-0' : '';
 	  return comp.replace(r, (_, M, m, p, pr) => {
 	    debug('tilde', comp, _, M, m, p, pr);
 	    let ret;
@@ -2449,10 +1692,10 @@ function requireRange () {
 	    if (isX(M)) {
 	      ret = '';
 	    } else if (isX(m)) {
-	      ret = `>=${M}.0.0 <${+M + 1}.0.0-0`;
+	      ret = `>=${M}.0.0${z} <${+M + 1}.0.0-0`;
 	    } else if (isX(p)) {
 	      // ~1.2 == >=1.2.0 <1.3.0-0
-	      ret = `>=${M}.${m}.0 <${M}.${+m + 1}.0-0`;
+	      ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
 	    } else if (pr) {
 	      debug('replaceTilde pr', pr);
 	      ret = `>=${M}.${m}.${p}-${pr
@@ -2521,10 +1764,10 @@ function requireRange () {
 	      if (M === '0') {
 	        if (m === '0') {
 	          ret = `>=${M}.${m}.${p
-	          }${z} <${M}.${m}.${+p + 1}-0`;
+	          } <${M}.${m}.${+p + 1}-0`;
 	        } else {
 	          ret = `>=${M}.${m}.${p
-	          }${z} <${M}.${+m + 1}.0-0`;
+	          } <${M}.${+m + 1}.0-0`;
 	        }
 	      } else {
 	        ret = `>=${M}.${m}.${p
@@ -2550,6 +1793,10 @@ function requireRange () {
 	  const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
 	  return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
 	    debug('xRange', comp, ret, gtlt, M, m, p, pr);
+	    if (invalidXRangeOrder(M, m, p)) {
+	      return comp
+	    }
+
 	    const xM = isX(M);
 	    const xm = xM || isX(m);
 	    const xp = xm || isX(p);
@@ -3436,7 +2683,7 @@ function requireSubset () {
 	        if (higher === c && higher !== gt) {
 	          return false
 	        }
-	      } else if (gt.operator === '>=' && !satisfies(gt.semver, String(c), options)) {
+	      } else if (gt.operator === '>=' && !c.test(gt.semver)) {
 	        return false
 	      }
 	    }
@@ -3454,7 +2701,7 @@ function requireSubset () {
 	        if (lower === c && lower !== lt) {
 	          return false
 	        }
-	      } else if (lt.operator === '<=' && !satisfies(lt.semver, String(c), options)) {
+	      } else if (lt.operator === '<=' && !c.test(lt.semver)) {
 	        return false
 	      }
 	    }
@@ -3547,6 +2794,7 @@ function requireSemver () {
 	const lte = requireLte();
 	const cmp = requireCmp();
 	const coerce = requireCoerce();
+	const truncate = requireTruncate();
 	const Comparator = requireComparator();
 	const Range = requireRange();
 	const satisfies = requireSatisfies();
@@ -3585,6 +2833,7 @@ function requireSemver () {
 	  lte,
 	  cmp,
 	  coerce,
+	  truncate,
 	  Comparator,
 	  Range,
 	  satisfies,
@@ -34927,7 +34176,7 @@ function getHeaderName() {
  */
 async function setPlatformSpecificData(map) {
     if (process$1 && process$1.versions) {
-        const osInfo = `${os$1.type()} ${os$1.release()}; ${os$1.arch()}`;
+        const osInfo = `${os.type()} ${os.release()}; ${os.arch()}`;
         const versions = process$1.versions;
         if (versions.bun) {
             map.set("Bun", `${versions.bun} (${osInfo})`);
@@ -54648,186 +53897,186 @@ const BlockBlobGetBlockListExceptionHeaders = {
 };
 
 var Mappers = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    AccessPolicy: AccessPolicy,
-    AppendBlobAppendBlockExceptionHeaders: AppendBlobAppendBlockExceptionHeaders,
-    AppendBlobAppendBlockFromUrlExceptionHeaders: AppendBlobAppendBlockFromUrlExceptionHeaders,
-    AppendBlobAppendBlockFromUrlHeaders: AppendBlobAppendBlockFromUrlHeaders,
-    AppendBlobAppendBlockHeaders: AppendBlobAppendBlockHeaders,
-    AppendBlobCreateExceptionHeaders: AppendBlobCreateExceptionHeaders,
-    AppendBlobCreateHeaders: AppendBlobCreateHeaders,
-    AppendBlobSealExceptionHeaders: AppendBlobSealExceptionHeaders,
-    AppendBlobSealHeaders: AppendBlobSealHeaders,
-    ArrowConfiguration: ArrowConfiguration,
-    ArrowField: ArrowField,
-    BlobAbortCopyFromURLExceptionHeaders: BlobAbortCopyFromURLExceptionHeaders,
-    BlobAbortCopyFromURLHeaders: BlobAbortCopyFromURLHeaders,
-    BlobAcquireLeaseExceptionHeaders: BlobAcquireLeaseExceptionHeaders,
-    BlobAcquireLeaseHeaders: BlobAcquireLeaseHeaders,
-    BlobBreakLeaseExceptionHeaders: BlobBreakLeaseExceptionHeaders,
-    BlobBreakLeaseHeaders: BlobBreakLeaseHeaders,
-    BlobChangeLeaseExceptionHeaders: BlobChangeLeaseExceptionHeaders,
-    BlobChangeLeaseHeaders: BlobChangeLeaseHeaders,
-    BlobCopyFromURLExceptionHeaders: BlobCopyFromURLExceptionHeaders,
-    BlobCopyFromURLHeaders: BlobCopyFromURLHeaders,
-    BlobCreateSnapshotExceptionHeaders: BlobCreateSnapshotExceptionHeaders,
-    BlobCreateSnapshotHeaders: BlobCreateSnapshotHeaders,
-    BlobDeleteExceptionHeaders: BlobDeleteExceptionHeaders,
-    BlobDeleteHeaders: BlobDeleteHeaders,
-    BlobDeleteImmutabilityPolicyExceptionHeaders: BlobDeleteImmutabilityPolicyExceptionHeaders,
-    BlobDeleteImmutabilityPolicyHeaders: BlobDeleteImmutabilityPolicyHeaders,
-    BlobDownloadExceptionHeaders: BlobDownloadExceptionHeaders,
-    BlobDownloadHeaders: BlobDownloadHeaders,
-    BlobFlatListSegment: BlobFlatListSegment,
-    BlobGetAccountInfoExceptionHeaders: BlobGetAccountInfoExceptionHeaders,
-    BlobGetAccountInfoHeaders: BlobGetAccountInfoHeaders,
-    BlobGetPropertiesExceptionHeaders: BlobGetPropertiesExceptionHeaders,
-    BlobGetPropertiesHeaders: BlobGetPropertiesHeaders,
-    BlobGetTagsExceptionHeaders: BlobGetTagsExceptionHeaders,
-    BlobGetTagsHeaders: BlobGetTagsHeaders,
-    BlobHierarchyListSegment: BlobHierarchyListSegment,
-    BlobItemInternal: BlobItemInternal,
-    BlobName: BlobName,
-    BlobPrefix: BlobPrefix,
-    BlobPropertiesInternal: BlobPropertiesInternal,
-    BlobQueryExceptionHeaders: BlobQueryExceptionHeaders,
-    BlobQueryHeaders: BlobQueryHeaders,
-    BlobReleaseLeaseExceptionHeaders: BlobReleaseLeaseExceptionHeaders,
-    BlobReleaseLeaseHeaders: BlobReleaseLeaseHeaders,
-    BlobRenewLeaseExceptionHeaders: BlobRenewLeaseExceptionHeaders,
-    BlobRenewLeaseHeaders: BlobRenewLeaseHeaders,
-    BlobServiceProperties: BlobServiceProperties,
-    BlobServiceStatistics: BlobServiceStatistics,
-    BlobSetExpiryExceptionHeaders: BlobSetExpiryExceptionHeaders,
-    BlobSetExpiryHeaders: BlobSetExpiryHeaders,
-    BlobSetHttpHeadersExceptionHeaders: BlobSetHttpHeadersExceptionHeaders,
-    BlobSetHttpHeadersHeaders: BlobSetHttpHeadersHeaders,
-    BlobSetImmutabilityPolicyExceptionHeaders: BlobSetImmutabilityPolicyExceptionHeaders,
-    BlobSetImmutabilityPolicyHeaders: BlobSetImmutabilityPolicyHeaders,
-    BlobSetLegalHoldExceptionHeaders: BlobSetLegalHoldExceptionHeaders,
-    BlobSetLegalHoldHeaders: BlobSetLegalHoldHeaders,
-    BlobSetMetadataExceptionHeaders: BlobSetMetadataExceptionHeaders,
-    BlobSetMetadataHeaders: BlobSetMetadataHeaders,
-    BlobSetTagsExceptionHeaders: BlobSetTagsExceptionHeaders,
-    BlobSetTagsHeaders: BlobSetTagsHeaders,
-    BlobSetTierExceptionHeaders: BlobSetTierExceptionHeaders,
-    BlobSetTierHeaders: BlobSetTierHeaders,
-    BlobStartCopyFromURLExceptionHeaders: BlobStartCopyFromURLExceptionHeaders,
-    BlobStartCopyFromURLHeaders: BlobStartCopyFromURLHeaders,
-    BlobTag: BlobTag,
-    BlobTags: BlobTags,
-    BlobUndeleteExceptionHeaders: BlobUndeleteExceptionHeaders,
-    BlobUndeleteHeaders: BlobUndeleteHeaders,
-    Block: Block,
-    BlockBlobCommitBlockListExceptionHeaders: BlockBlobCommitBlockListExceptionHeaders,
-    BlockBlobCommitBlockListHeaders: BlockBlobCommitBlockListHeaders,
-    BlockBlobGetBlockListExceptionHeaders: BlockBlobGetBlockListExceptionHeaders,
-    BlockBlobGetBlockListHeaders: BlockBlobGetBlockListHeaders,
-    BlockBlobPutBlobFromUrlExceptionHeaders: BlockBlobPutBlobFromUrlExceptionHeaders,
-    BlockBlobPutBlobFromUrlHeaders: BlockBlobPutBlobFromUrlHeaders,
-    BlockBlobStageBlockExceptionHeaders: BlockBlobStageBlockExceptionHeaders,
-    BlockBlobStageBlockFromURLExceptionHeaders: BlockBlobStageBlockFromURLExceptionHeaders,
-    BlockBlobStageBlockFromURLHeaders: BlockBlobStageBlockFromURLHeaders,
-    BlockBlobStageBlockHeaders: BlockBlobStageBlockHeaders,
-    BlockBlobUploadExceptionHeaders: BlockBlobUploadExceptionHeaders,
-    BlockBlobUploadHeaders: BlockBlobUploadHeaders,
-    BlockList: BlockList,
-    BlockLookupList: BlockLookupList,
-    ClearRange: ClearRange,
-    ContainerAcquireLeaseExceptionHeaders: ContainerAcquireLeaseExceptionHeaders,
-    ContainerAcquireLeaseHeaders: ContainerAcquireLeaseHeaders,
-    ContainerBreakLeaseExceptionHeaders: ContainerBreakLeaseExceptionHeaders,
-    ContainerBreakLeaseHeaders: ContainerBreakLeaseHeaders,
-    ContainerChangeLeaseExceptionHeaders: ContainerChangeLeaseExceptionHeaders,
-    ContainerChangeLeaseHeaders: ContainerChangeLeaseHeaders,
-    ContainerCreateExceptionHeaders: ContainerCreateExceptionHeaders,
-    ContainerCreateHeaders: ContainerCreateHeaders,
-    ContainerDeleteExceptionHeaders: ContainerDeleteExceptionHeaders,
-    ContainerDeleteHeaders: ContainerDeleteHeaders,
-    ContainerFilterBlobsExceptionHeaders: ContainerFilterBlobsExceptionHeaders,
-    ContainerFilterBlobsHeaders: ContainerFilterBlobsHeaders,
-    ContainerGetAccessPolicyExceptionHeaders: ContainerGetAccessPolicyExceptionHeaders,
-    ContainerGetAccessPolicyHeaders: ContainerGetAccessPolicyHeaders,
-    ContainerGetAccountInfoExceptionHeaders: ContainerGetAccountInfoExceptionHeaders,
-    ContainerGetAccountInfoHeaders: ContainerGetAccountInfoHeaders,
-    ContainerGetPropertiesExceptionHeaders: ContainerGetPropertiesExceptionHeaders,
-    ContainerGetPropertiesHeaders: ContainerGetPropertiesHeaders,
-    ContainerItem: ContainerItem,
-    ContainerListBlobFlatSegmentExceptionHeaders: ContainerListBlobFlatSegmentExceptionHeaders,
-    ContainerListBlobFlatSegmentHeaders: ContainerListBlobFlatSegmentHeaders,
-    ContainerListBlobHierarchySegmentExceptionHeaders: ContainerListBlobHierarchySegmentExceptionHeaders,
-    ContainerListBlobHierarchySegmentHeaders: ContainerListBlobHierarchySegmentHeaders,
-    ContainerProperties: ContainerProperties,
-    ContainerReleaseLeaseExceptionHeaders: ContainerReleaseLeaseExceptionHeaders,
-    ContainerReleaseLeaseHeaders: ContainerReleaseLeaseHeaders,
-    ContainerRenameExceptionHeaders: ContainerRenameExceptionHeaders,
-    ContainerRenameHeaders: ContainerRenameHeaders,
-    ContainerRenewLeaseExceptionHeaders: ContainerRenewLeaseExceptionHeaders,
-    ContainerRenewLeaseHeaders: ContainerRenewLeaseHeaders,
-    ContainerRestoreExceptionHeaders: ContainerRestoreExceptionHeaders,
-    ContainerRestoreHeaders: ContainerRestoreHeaders,
-    ContainerSetAccessPolicyExceptionHeaders: ContainerSetAccessPolicyExceptionHeaders,
-    ContainerSetAccessPolicyHeaders: ContainerSetAccessPolicyHeaders,
-    ContainerSetMetadataExceptionHeaders: ContainerSetMetadataExceptionHeaders,
-    ContainerSetMetadataHeaders: ContainerSetMetadataHeaders,
-    ContainerSubmitBatchExceptionHeaders: ContainerSubmitBatchExceptionHeaders,
-    ContainerSubmitBatchHeaders: ContainerSubmitBatchHeaders,
-    CorsRule: CorsRule,
-    DelimitedTextConfiguration: DelimitedTextConfiguration,
-    FilterBlobItem: FilterBlobItem,
-    FilterBlobSegment: FilterBlobSegment,
-    GeoReplication: GeoReplication,
-    JsonTextConfiguration: JsonTextConfiguration,
-    KeyInfo: KeyInfo,
-    ListBlobsFlatSegmentResponse: ListBlobsFlatSegmentResponse,
-    ListBlobsHierarchySegmentResponse: ListBlobsHierarchySegmentResponse,
-    ListContainersSegmentResponse: ListContainersSegmentResponse,
-    Logging: Logging,
-    Metrics: Metrics,
-    PageBlobClearPagesExceptionHeaders: PageBlobClearPagesExceptionHeaders,
-    PageBlobClearPagesHeaders: PageBlobClearPagesHeaders,
-    PageBlobCopyIncrementalExceptionHeaders: PageBlobCopyIncrementalExceptionHeaders,
-    PageBlobCopyIncrementalHeaders: PageBlobCopyIncrementalHeaders,
-    PageBlobCreateExceptionHeaders: PageBlobCreateExceptionHeaders,
-    PageBlobCreateHeaders: PageBlobCreateHeaders,
-    PageBlobGetPageRangesDiffExceptionHeaders: PageBlobGetPageRangesDiffExceptionHeaders,
-    PageBlobGetPageRangesDiffHeaders: PageBlobGetPageRangesDiffHeaders,
-    PageBlobGetPageRangesExceptionHeaders: PageBlobGetPageRangesExceptionHeaders,
-    PageBlobGetPageRangesHeaders: PageBlobGetPageRangesHeaders,
-    PageBlobResizeExceptionHeaders: PageBlobResizeExceptionHeaders,
-    PageBlobResizeHeaders: PageBlobResizeHeaders,
-    PageBlobUpdateSequenceNumberExceptionHeaders: PageBlobUpdateSequenceNumberExceptionHeaders,
-    PageBlobUpdateSequenceNumberHeaders: PageBlobUpdateSequenceNumberHeaders,
-    PageBlobUploadPagesExceptionHeaders: PageBlobUploadPagesExceptionHeaders,
-    PageBlobUploadPagesFromURLExceptionHeaders: PageBlobUploadPagesFromURLExceptionHeaders,
-    PageBlobUploadPagesFromURLHeaders: PageBlobUploadPagesFromURLHeaders,
-    PageBlobUploadPagesHeaders: PageBlobUploadPagesHeaders,
-    PageList: PageList,
-    PageRange: PageRange,
-    QueryFormat: QueryFormat,
-    QueryRequest: QueryRequest,
-    QuerySerialization: QuerySerialization,
-    RetentionPolicy: RetentionPolicy,
-    ServiceFilterBlobsExceptionHeaders: ServiceFilterBlobsExceptionHeaders,
-    ServiceFilterBlobsHeaders: ServiceFilterBlobsHeaders,
-    ServiceGetAccountInfoExceptionHeaders: ServiceGetAccountInfoExceptionHeaders,
-    ServiceGetAccountInfoHeaders: ServiceGetAccountInfoHeaders,
-    ServiceGetPropertiesExceptionHeaders: ServiceGetPropertiesExceptionHeaders,
-    ServiceGetPropertiesHeaders: ServiceGetPropertiesHeaders,
-    ServiceGetStatisticsExceptionHeaders: ServiceGetStatisticsExceptionHeaders,
-    ServiceGetStatisticsHeaders: ServiceGetStatisticsHeaders,
-    ServiceGetUserDelegationKeyExceptionHeaders: ServiceGetUserDelegationKeyExceptionHeaders,
-    ServiceGetUserDelegationKeyHeaders: ServiceGetUserDelegationKeyHeaders,
-    ServiceListContainersSegmentExceptionHeaders: ServiceListContainersSegmentExceptionHeaders,
-    ServiceListContainersSegmentHeaders: ServiceListContainersSegmentHeaders,
-    ServiceSetPropertiesExceptionHeaders: ServiceSetPropertiesExceptionHeaders,
-    ServiceSetPropertiesHeaders: ServiceSetPropertiesHeaders,
-    ServiceSubmitBatchExceptionHeaders: ServiceSubmitBatchExceptionHeaders,
-    ServiceSubmitBatchHeaders: ServiceSubmitBatchHeaders,
-    SignedIdentifier: SignedIdentifier,
-    StaticWebsite: StaticWebsite,
-    StorageError: StorageError,
-    UserDelegationKey: UserDelegationKey
+  __proto__: null,
+  AccessPolicy: AccessPolicy,
+  AppendBlobAppendBlockExceptionHeaders: AppendBlobAppendBlockExceptionHeaders,
+  AppendBlobAppendBlockFromUrlExceptionHeaders: AppendBlobAppendBlockFromUrlExceptionHeaders,
+  AppendBlobAppendBlockFromUrlHeaders: AppendBlobAppendBlockFromUrlHeaders,
+  AppendBlobAppendBlockHeaders: AppendBlobAppendBlockHeaders,
+  AppendBlobCreateExceptionHeaders: AppendBlobCreateExceptionHeaders,
+  AppendBlobCreateHeaders: AppendBlobCreateHeaders,
+  AppendBlobSealExceptionHeaders: AppendBlobSealExceptionHeaders,
+  AppendBlobSealHeaders: AppendBlobSealHeaders,
+  ArrowConfiguration: ArrowConfiguration,
+  ArrowField: ArrowField,
+  BlobAbortCopyFromURLExceptionHeaders: BlobAbortCopyFromURLExceptionHeaders,
+  BlobAbortCopyFromURLHeaders: BlobAbortCopyFromURLHeaders,
+  BlobAcquireLeaseExceptionHeaders: BlobAcquireLeaseExceptionHeaders,
+  BlobAcquireLeaseHeaders: BlobAcquireLeaseHeaders,
+  BlobBreakLeaseExceptionHeaders: BlobBreakLeaseExceptionHeaders,
+  BlobBreakLeaseHeaders: BlobBreakLeaseHeaders,
+  BlobChangeLeaseExceptionHeaders: BlobChangeLeaseExceptionHeaders,
+  BlobChangeLeaseHeaders: BlobChangeLeaseHeaders,
+  BlobCopyFromURLExceptionHeaders: BlobCopyFromURLExceptionHeaders,
+  BlobCopyFromURLHeaders: BlobCopyFromURLHeaders,
+  BlobCreateSnapshotExceptionHeaders: BlobCreateSnapshotExceptionHeaders,
+  BlobCreateSnapshotHeaders: BlobCreateSnapshotHeaders,
+  BlobDeleteExceptionHeaders: BlobDeleteExceptionHeaders,
+  BlobDeleteHeaders: BlobDeleteHeaders,
+  BlobDeleteImmutabilityPolicyExceptionHeaders: BlobDeleteImmutabilityPolicyExceptionHeaders,
+  BlobDeleteImmutabilityPolicyHeaders: BlobDeleteImmutabilityPolicyHeaders,
+  BlobDownloadExceptionHeaders: BlobDownloadExceptionHeaders,
+  BlobDownloadHeaders: BlobDownloadHeaders,
+  BlobFlatListSegment: BlobFlatListSegment,
+  BlobGetAccountInfoExceptionHeaders: BlobGetAccountInfoExceptionHeaders,
+  BlobGetAccountInfoHeaders: BlobGetAccountInfoHeaders,
+  BlobGetPropertiesExceptionHeaders: BlobGetPropertiesExceptionHeaders,
+  BlobGetPropertiesHeaders: BlobGetPropertiesHeaders,
+  BlobGetTagsExceptionHeaders: BlobGetTagsExceptionHeaders,
+  BlobGetTagsHeaders: BlobGetTagsHeaders,
+  BlobHierarchyListSegment: BlobHierarchyListSegment,
+  BlobItemInternal: BlobItemInternal,
+  BlobName: BlobName,
+  BlobPrefix: BlobPrefix,
+  BlobPropertiesInternal: BlobPropertiesInternal,
+  BlobQueryExceptionHeaders: BlobQueryExceptionHeaders,
+  BlobQueryHeaders: BlobQueryHeaders,
+  BlobReleaseLeaseExceptionHeaders: BlobReleaseLeaseExceptionHeaders,
+  BlobReleaseLeaseHeaders: BlobReleaseLeaseHeaders,
+  BlobRenewLeaseExceptionHeaders: BlobRenewLeaseExceptionHeaders,
+  BlobRenewLeaseHeaders: BlobRenewLeaseHeaders,
+  BlobServiceProperties: BlobServiceProperties,
+  BlobServiceStatistics: BlobServiceStatistics,
+  BlobSetExpiryExceptionHeaders: BlobSetExpiryExceptionHeaders,
+  BlobSetExpiryHeaders: BlobSetExpiryHeaders,
+  BlobSetHttpHeadersExceptionHeaders: BlobSetHttpHeadersExceptionHeaders,
+  BlobSetHttpHeadersHeaders: BlobSetHttpHeadersHeaders,
+  BlobSetImmutabilityPolicyExceptionHeaders: BlobSetImmutabilityPolicyExceptionHeaders,
+  BlobSetImmutabilityPolicyHeaders: BlobSetImmutabilityPolicyHeaders,
+  BlobSetLegalHoldExceptionHeaders: BlobSetLegalHoldExceptionHeaders,
+  BlobSetLegalHoldHeaders: BlobSetLegalHoldHeaders,
+  BlobSetMetadataExceptionHeaders: BlobSetMetadataExceptionHeaders,
+  BlobSetMetadataHeaders: BlobSetMetadataHeaders,
+  BlobSetTagsExceptionHeaders: BlobSetTagsExceptionHeaders,
+  BlobSetTagsHeaders: BlobSetTagsHeaders,
+  BlobSetTierExceptionHeaders: BlobSetTierExceptionHeaders,
+  BlobSetTierHeaders: BlobSetTierHeaders,
+  BlobStartCopyFromURLExceptionHeaders: BlobStartCopyFromURLExceptionHeaders,
+  BlobStartCopyFromURLHeaders: BlobStartCopyFromURLHeaders,
+  BlobTag: BlobTag,
+  BlobTags: BlobTags,
+  BlobUndeleteExceptionHeaders: BlobUndeleteExceptionHeaders,
+  BlobUndeleteHeaders: BlobUndeleteHeaders,
+  Block: Block,
+  BlockBlobCommitBlockListExceptionHeaders: BlockBlobCommitBlockListExceptionHeaders,
+  BlockBlobCommitBlockListHeaders: BlockBlobCommitBlockListHeaders,
+  BlockBlobGetBlockListExceptionHeaders: BlockBlobGetBlockListExceptionHeaders,
+  BlockBlobGetBlockListHeaders: BlockBlobGetBlockListHeaders,
+  BlockBlobPutBlobFromUrlExceptionHeaders: BlockBlobPutBlobFromUrlExceptionHeaders,
+  BlockBlobPutBlobFromUrlHeaders: BlockBlobPutBlobFromUrlHeaders,
+  BlockBlobStageBlockExceptionHeaders: BlockBlobStageBlockExceptionHeaders,
+  BlockBlobStageBlockFromURLExceptionHeaders: BlockBlobStageBlockFromURLExceptionHeaders,
+  BlockBlobStageBlockFromURLHeaders: BlockBlobStageBlockFromURLHeaders,
+  BlockBlobStageBlockHeaders: BlockBlobStageBlockHeaders,
+  BlockBlobUploadExceptionHeaders: BlockBlobUploadExceptionHeaders,
+  BlockBlobUploadHeaders: BlockBlobUploadHeaders,
+  BlockList: BlockList,
+  BlockLookupList: BlockLookupList,
+  ClearRange: ClearRange,
+  ContainerAcquireLeaseExceptionHeaders: ContainerAcquireLeaseExceptionHeaders,
+  ContainerAcquireLeaseHeaders: ContainerAcquireLeaseHeaders,
+  ContainerBreakLeaseExceptionHeaders: ContainerBreakLeaseExceptionHeaders,
+  ContainerBreakLeaseHeaders: ContainerBreakLeaseHeaders,
+  ContainerChangeLeaseExceptionHeaders: ContainerChangeLeaseExceptionHeaders,
+  ContainerChangeLeaseHeaders: ContainerChangeLeaseHeaders,
+  ContainerCreateExceptionHeaders: ContainerCreateExceptionHeaders,
+  ContainerCreateHeaders: ContainerCreateHeaders,
+  ContainerDeleteExceptionHeaders: ContainerDeleteExceptionHeaders,
+  ContainerDeleteHeaders: ContainerDeleteHeaders,
+  ContainerFilterBlobsExceptionHeaders: ContainerFilterBlobsExceptionHeaders,
+  ContainerFilterBlobsHeaders: ContainerFilterBlobsHeaders,
+  ContainerGetAccessPolicyExceptionHeaders: ContainerGetAccessPolicyExceptionHeaders,
+  ContainerGetAccessPolicyHeaders: ContainerGetAccessPolicyHeaders,
+  ContainerGetAccountInfoExceptionHeaders: ContainerGetAccountInfoExceptionHeaders,
+  ContainerGetAccountInfoHeaders: ContainerGetAccountInfoHeaders,
+  ContainerGetPropertiesExceptionHeaders: ContainerGetPropertiesExceptionHeaders,
+  ContainerGetPropertiesHeaders: ContainerGetPropertiesHeaders,
+  ContainerItem: ContainerItem,
+  ContainerListBlobFlatSegmentExceptionHeaders: ContainerListBlobFlatSegmentExceptionHeaders,
+  ContainerListBlobFlatSegmentHeaders: ContainerListBlobFlatSegmentHeaders,
+  ContainerListBlobHierarchySegmentExceptionHeaders: ContainerListBlobHierarchySegmentExceptionHeaders,
+  ContainerListBlobHierarchySegmentHeaders: ContainerListBlobHierarchySegmentHeaders,
+  ContainerProperties: ContainerProperties,
+  ContainerReleaseLeaseExceptionHeaders: ContainerReleaseLeaseExceptionHeaders,
+  ContainerReleaseLeaseHeaders: ContainerReleaseLeaseHeaders,
+  ContainerRenameExceptionHeaders: ContainerRenameExceptionHeaders,
+  ContainerRenameHeaders: ContainerRenameHeaders,
+  ContainerRenewLeaseExceptionHeaders: ContainerRenewLeaseExceptionHeaders,
+  ContainerRenewLeaseHeaders: ContainerRenewLeaseHeaders,
+  ContainerRestoreExceptionHeaders: ContainerRestoreExceptionHeaders,
+  ContainerRestoreHeaders: ContainerRestoreHeaders,
+  ContainerSetAccessPolicyExceptionHeaders: ContainerSetAccessPolicyExceptionHeaders,
+  ContainerSetAccessPolicyHeaders: ContainerSetAccessPolicyHeaders,
+  ContainerSetMetadataExceptionHeaders: ContainerSetMetadataExceptionHeaders,
+  ContainerSetMetadataHeaders: ContainerSetMetadataHeaders,
+  ContainerSubmitBatchExceptionHeaders: ContainerSubmitBatchExceptionHeaders,
+  ContainerSubmitBatchHeaders: ContainerSubmitBatchHeaders,
+  CorsRule: CorsRule,
+  DelimitedTextConfiguration: DelimitedTextConfiguration,
+  FilterBlobItem: FilterBlobItem,
+  FilterBlobSegment: FilterBlobSegment,
+  GeoReplication: GeoReplication,
+  JsonTextConfiguration: JsonTextConfiguration,
+  KeyInfo: KeyInfo,
+  ListBlobsFlatSegmentResponse: ListBlobsFlatSegmentResponse,
+  ListBlobsHierarchySegmentResponse: ListBlobsHierarchySegmentResponse,
+  ListContainersSegmentResponse: ListContainersSegmentResponse,
+  Logging: Logging,
+  Metrics: Metrics,
+  PageBlobClearPagesExceptionHeaders: PageBlobClearPagesExceptionHeaders,
+  PageBlobClearPagesHeaders: PageBlobClearPagesHeaders,
+  PageBlobCopyIncrementalExceptionHeaders: PageBlobCopyIncrementalExceptionHeaders,
+  PageBlobCopyIncrementalHeaders: PageBlobCopyIncrementalHeaders,
+  PageBlobCreateExceptionHeaders: PageBlobCreateExceptionHeaders,
+  PageBlobCreateHeaders: PageBlobCreateHeaders,
+  PageBlobGetPageRangesDiffExceptionHeaders: PageBlobGetPageRangesDiffExceptionHeaders,
+  PageBlobGetPageRangesDiffHeaders: PageBlobGetPageRangesDiffHeaders,
+  PageBlobGetPageRangesExceptionHeaders: PageBlobGetPageRangesExceptionHeaders,
+  PageBlobGetPageRangesHeaders: PageBlobGetPageRangesHeaders,
+  PageBlobResizeExceptionHeaders: PageBlobResizeExceptionHeaders,
+  PageBlobResizeHeaders: PageBlobResizeHeaders,
+  PageBlobUpdateSequenceNumberExceptionHeaders: PageBlobUpdateSequenceNumberExceptionHeaders,
+  PageBlobUpdateSequenceNumberHeaders: PageBlobUpdateSequenceNumberHeaders,
+  PageBlobUploadPagesExceptionHeaders: PageBlobUploadPagesExceptionHeaders,
+  PageBlobUploadPagesFromURLExceptionHeaders: PageBlobUploadPagesFromURLExceptionHeaders,
+  PageBlobUploadPagesFromURLHeaders: PageBlobUploadPagesFromURLHeaders,
+  PageBlobUploadPagesHeaders: PageBlobUploadPagesHeaders,
+  PageList: PageList,
+  PageRange: PageRange,
+  QueryFormat: QueryFormat,
+  QueryRequest: QueryRequest,
+  QuerySerialization: QuerySerialization,
+  RetentionPolicy: RetentionPolicy,
+  ServiceFilterBlobsExceptionHeaders: ServiceFilterBlobsExceptionHeaders,
+  ServiceFilterBlobsHeaders: ServiceFilterBlobsHeaders,
+  ServiceGetAccountInfoExceptionHeaders: ServiceGetAccountInfoExceptionHeaders,
+  ServiceGetAccountInfoHeaders: ServiceGetAccountInfoHeaders,
+  ServiceGetPropertiesExceptionHeaders: ServiceGetPropertiesExceptionHeaders,
+  ServiceGetPropertiesHeaders: ServiceGetPropertiesHeaders,
+  ServiceGetStatisticsExceptionHeaders: ServiceGetStatisticsExceptionHeaders,
+  ServiceGetStatisticsHeaders: ServiceGetStatisticsHeaders,
+  ServiceGetUserDelegationKeyExceptionHeaders: ServiceGetUserDelegationKeyExceptionHeaders,
+  ServiceGetUserDelegationKeyHeaders: ServiceGetUserDelegationKeyHeaders,
+  ServiceListContainersSegmentExceptionHeaders: ServiceListContainersSegmentExceptionHeaders,
+  ServiceListContainersSegmentHeaders: ServiceListContainersSegmentHeaders,
+  ServiceSetPropertiesExceptionHeaders: ServiceSetPropertiesExceptionHeaders,
+  ServiceSetPropertiesHeaders: ServiceSetPropertiesHeaders,
+  ServiceSubmitBatchExceptionHeaders: ServiceSubmitBatchExceptionHeaders,
+  ServiceSubmitBatchHeaders: ServiceSubmitBatchHeaders,
+  SignedIdentifier: SignedIdentifier,
+  StaticWebsite: StaticWebsite,
+  StorageError: StorageError,
+  UserDelegationKey: UserDelegationKey
 });
 
 /*
@@ -68080,7 +67329,7 @@ function getCacheServiceURL() {
     }
 }
 
-var version = "6.2.0";
+var version = "6.3.0";
 var require$$0 = {
 	version: version};
 
@@ -72149,7 +71398,9 @@ function getTarArgs(tarPath_1, compressionMethod_1, type_1) {
             case 'extract':
                 args.push('-xf', BSD_TAR_ZSTD
                     ? tarFile
-                    : archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '-P', '-C', workingDirectory.replace(new RegExp(`\\${path.sep}`, 'g'), '/'));
+                    : archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/'), '-P', '-C', BSD_TAR_ZSTD
+                    ? quoteAbsolutePath(workingDirectory)
+                    : workingDirectory.replace(new RegExp(`\\${path.sep}`, 'g'), '/'));
                 break;
             case 'list':
                 args.push('-tf', BSD_TAR_ZSTD
@@ -72189,15 +71440,18 @@ function getCommands(compressionMethod_1, type_1) {
         else {
             args = [[...tarArgs].join(' '), [...compressionArgs].join(' ')];
         }
-        if (BSD_TAR_ZSTD) {
-            return args;
-        }
-        return [args.join(' ')];
+        return {
+            commands: BSD_TAR_ZSTD ? args : [args.join(' ')],
+            requiresTempDirectory: BSD_TAR_ZSTD && type !== 'create'
+        };
     });
 }
 function getWorkingDirectory() {
     var _a;
     return (_a = process.env['GITHUB_WORKSPACE']) !== null && _a !== void 0 ? _a : process.cwd();
+}
+function quoteAbsolutePath(filePath) {
+    return `"${path.resolve(filePath).replace(new RegExp(`\\${path.sep}`, 'g'), '/')}"`;
 }
 // Common function for extractTar and listTar to get the compression method
 function getDecompressionProgram(tarPath, compressionMethod, archivePath) {
@@ -72215,7 +71469,7 @@ function getDecompressionProgram(tarPath, compressionMethod, archivePath) {
                     ? [
                         'zstd -d --long=30 --force -o',
                         TarFilename,
-                        archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/')
+                        quoteAbsolutePath(archivePath)
                     ]
                     : [
                         '--use-compress-program',
@@ -72223,11 +71477,7 @@ function getDecompressionProgram(tarPath, compressionMethod, archivePath) {
                     ];
             case CompressionMethod.ZstdWithoutLong:
                 return BSD_TAR_ZSTD
-                    ? [
-                        'zstd -d --force -o',
-                        TarFilename,
-                        archivePath.replace(new RegExp(`\\${path.sep}`, 'g'), '/')
-                    ]
+                    ? ['zstd -d --force -o', TarFilename, quoteAbsolutePath(archivePath)]
                     : ['--use-compress-program', IS_WINDOWS ? '"zstd -d"' : 'unzstd'];
             default:
                 return ['-z'];
@@ -72287,11 +71537,34 @@ function execCommands(commands, cwd) {
         }
     });
 }
+function execReadCommands(archivePath, compressionMethod, type) {
+    return __awaiter$1(this, void 0, void 0, function* () {
+        const { commands, requiresTempDirectory } = yield getCommands(compressionMethod, type, archivePath);
+        // The Windows BSD-tar fallback decompresses into cache.tar before reading
+        // it. Isolate that intermediate for each list/extract operation, including
+        // debug listings during saves.
+        const tempDirectory = requiresTempDirectory
+            ? yield createTempDirectory()
+            : undefined;
+        try {
+            yield execCommands(commands, tempDirectory);
+        }
+        finally {
+            if (tempDirectory) {
+                try {
+                    yield rmRF(tempDirectory);
+                }
+                catch (error) {
+                    debug(`Failed to delete temporary tar directory: ${error}`);
+                }
+            }
+        }
+    });
+}
 // List the contents of a tar
 function listTar(archivePath, compressionMethod) {
     return __awaiter$1(this, void 0, void 0, function* () {
-        const commands = yield getCommands(compressionMethod, 'list', archivePath);
-        yield execCommands(commands);
+        yield execReadCommands(archivePath, compressionMethod, 'list');
     });
 }
 // Extract a tar
@@ -72300,8 +71573,7 @@ function extractTar(archivePath, compressionMethod) {
         // Create directory to extract tar into
         const workingDirectory = getWorkingDirectory();
         yield mkdirP(workingDirectory);
-        const commands = yield getCommands(compressionMethod, 'extract', archivePath);
-        yield execCommands(commands);
+        yield execReadCommands(archivePath, compressionMethod, 'extract');
     });
 }
 // Create a tar
@@ -72309,7 +71581,7 @@ function createTar(archiveFolder, sourceDirectories, compressionMethod) {
     return __awaiter$1(this, void 0, void 0, function* () {
         // Write source directories to manifest.txt to avoid command length limits
         writeFileSync(path.join(archiveFolder, ManifestFilename), sourceDirectories.join('\n'));
-        const commands = yield getCommands(compressionMethod, 'create');
+        const { commands } = yield getCommands(compressionMethod, 'create');
         yield execCommands(commands, archiveFolder);
     });
 }
