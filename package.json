@@ -1,7 +1,9 @@
 {
   "private": true,
-  "name": "rust-cache",
-  "version": "2.9.2",
+  "name": "@step-security/rust-cache",
+  "author": "step-security",
+  "publisher": "step-security",
+  "version": "2.9.3",
   "description": "A GitHub Action that implements smart caching for rust/cargo projects with sensible defaults.",
   "keywords": [
     "actions",
@@ -19,22 +21,22 @@
   "homepage": "https://github.com/step-security/rust-cache#readme",
   "type": "module",
   "dependencies": {
-    "@actions/cache": "^6.2.0",
+    "@actions/cache": "^6.3.0",
     "@actions/core": "^3.0.1",
     "@actions/exec": "^3.0.0",
     "@actions/glob": "^0.7.0",
     "@actions/io": "^3.0.2",
     "@actions/warpbuild-cache": "npm:github-actions.warp-cache@1.4.7",
     "axios": "^1.20.0",
-    "smol-toml": "^1.7.1"
+    "smol-toml": "^1.9.1"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.3",
     "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.6.5",
     "linefix": "^0.1.1",
-    "rollup": "^4.62.4",
+    "rollup": "^4.64.12",
     "typescript": "7.0.2"
   },
   "scripts": {
@@ -42,5 +44,9 @@
     "prebuild": "npm run clean",
     "build": "tsc && rollup --config .build/rollup.config.js",
     "prepare": "npm run build && linefix dist"
+  },
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
   }
 }

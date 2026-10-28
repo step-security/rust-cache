@@ -1,4 +1,5 @@
 name: "Rust Cache"
+author: step-security
 description: "A GitHub Action that implements smart caching for rust/cargo projects with sensible defaults."
 inputs:
   prefix-key:

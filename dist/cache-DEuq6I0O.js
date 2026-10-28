@@ -1,4 +1,4 @@
-import { o as commonjsGlobal, v as requireTunnel, g as getDefaultExportFromCjs, x as getAugmentedNamespace } from './cleanup-BtFCJ68u.js';
+import { p as commonjsGlobal, y as requireTunnel, g as getDefaultExportFromCjs, z as getAugmentedNamespace } from './cleanup-BGGN43KH.js';
 import os__default from 'os';
 import crypto__default from 'crypto';
 import fs__default from 'fs';
@@ -28,8 +28,8 @@ import require$$5$1 from 'string_decoder';
 import require$$0$9 from 'diagnostics_channel';
 import require$$2__default from 'child_process';
 import require$$6 from 'timers';
-import { r as requireMinimatch, a as requireDist$3, b as requireDist$5, c as requireState$1, d as requireState$2 } from './state-Bs067o4F.js';
 import require$$0$a from 'punycode';
+import { r as requireDist$3, a as requireDist$5, b as requireState$1, c as requireState$2 } from './state-DJwXECn6.js';
 import process$1 from 'node:process';
 import { r as requireSrc$c } from './index-7LN3rhJP.js';
 import { r as requireForm_data, a as requireDist$4, b as requireFollowRedirects } from './index-mOt-pWPW.js';
@@ -27392,6 +27392,1476 @@ function requireInternalPatternHelper () {
 }
 
 var internalPattern = {};
+
+var balancedMatch;
+var hasRequiredBalancedMatch;
+
+function requireBalancedMatch () {
+	if (hasRequiredBalancedMatch) return balancedMatch;
+	hasRequiredBalancedMatch = 1;
+	balancedMatch = balanced;
+	function balanced(a, b, str) {
+	  if (a instanceof RegExp) a = maybeMatch(a, str);
+	  if (b instanceof RegExp) b = maybeMatch(b, str);
+
+	  var r = range(a, b, str);
+
+	  return r && {
+	    start: r[0],
+	    end: r[1],
+	    pre: str.slice(0, r[0]),
+	    body: str.slice(r[0] + a.length, r[1]),
+	    post: str.slice(r[1] + b.length)
+	  };
+	}
+
+	function maybeMatch(reg, str) {
+	  var m = str.match(reg);
+	  return m ? m[0] : null;
+	}
+
+	balanced.range = range;
+	function range(a, b, str) {
+	  var begs, beg, left, right, result;
+	  var ai = str.indexOf(a);
+	  var bi = str.indexOf(b, ai + 1);
+	  var i = ai;
+
+	  if (ai >= 0 && bi > 0) {
+	    if(a===b) {
+	      return [ai, bi];
+	    }
+	    begs = [];
+	    left = str.length;
+
+	    while (i >= 0 && !result) {
+	      if (i == ai) {
+	        begs.push(i);
+	        ai = str.indexOf(a, i + 1);
+	      } else if (begs.length == 1) {
+	        result = [ begs.pop(), bi ];
+	      } else {
+	        beg = begs.pop();
+	        if (beg < left) {
+	          left = beg;
+	          right = bi;
+	        }
+
+	        bi = str.indexOf(b, i + 1);
+	      }
+
+	      i = ai < bi && ai >= 0 ? ai : bi;
+	    }
+
+	    if (begs.length) {
+	      result = [ left, right ];
+	    }
+	  }
+
+	  return result;
+	}
+	return balancedMatch;
+}
+
+var braceExpansion;
+var hasRequiredBraceExpansion;
+
+function requireBraceExpansion () {
+	if (hasRequiredBraceExpansion) return braceExpansion;
+	hasRequiredBraceExpansion = 1;
+	var balanced = requireBalancedMatch();
+
+	braceExpansion = expandTop;
+
+	var escSlash = '\0SLASH'+Math.random()+'\0';
+	var escOpen = '\0OPEN'+Math.random()+'\0';
+	var escClose = '\0CLOSE'+Math.random()+'\0';
+	var escComma = '\0COMMA'+Math.random()+'\0';
+	var escPeriod = '\0PERIOD'+Math.random()+'\0';
+
+	var EXPANSION_MAX = 100000;
+
+	// `EXPANSION_MAX` caps the *number* of expansions, but not their length. An
+	// input like `'{a,b}'.repeat(1500)` stays under that count - its output is
+	// truncated to 100k results - while making every result ~1500 characters
+	// long. The result set, and the intermediate arrays built while combining
+	// brace sets, then grow large enough to exhaust memory and crash the process
+	// (CVE-2026-14257). `EXPANSION_MAX_LENGTH` bounds the total number of
+	// characters the accumulator may hold at any point, so memory stays flat no
+	// matter how many brace groups are chained. The limit sits well above any
+	// realistic expansion (100k results hitting `EXPANSION_MAX` measure ~1M
+	// characters) so legitimate input is unaffected.
+	var EXPANSION_MAX_LENGTH = 4000000;
+
+	function numeric(str) {
+	  return parseInt(str, 10) == str
+	    ? parseInt(str, 10)
+	    : str.charCodeAt(0);
+	}
+
+	function escapeBraces(str) {
+	  return str.split('\\\\').join(escSlash)
+	            .split('\\{').join(escOpen)
+	            .split('\\}').join(escClose)
+	            .split('\\,').join(escComma)
+	            .split('\\.').join(escPeriod);
+	}
+
+	function unescapeBraces(str) {
+	  return str.split(escSlash).join('\\')
+	            .split(escOpen).join('{')
+	            .split(escClose).join('}')
+	            .split(escComma).join(',')
+	            .split(escPeriod).join('.');
+	}
+
+
+	// Basically just str.split(","), but handling cases
+	// where we have nested braced sections, which should be
+	// treated as individual members, like {a,{b,c},d}
+	function parseCommaParts(str) {
+	  if (!str)
+	    return [''];
+
+	  var parts = [];
+	  var m = balanced('{', '}', str);
+
+	  if (!m)
+	    return str.split(',');
+
+	  var pre = m.pre;
+	  var body = m.body;
+	  var post = m.post;
+	  var p = pre.split(',');
+
+	  p[p.length-1] += '{' + body + '}';
+	  var postParts = parseCommaParts(post);
+	  if (post.length) {
+	    p[p.length-1] += postParts.shift();
+	    p.push.apply(p, postParts);
+	  }
+
+	  parts.push.apply(parts, p);
+
+	  return parts;
+	}
+
+	function expandTop(str, options) {
+	  if (!str)
+	    return [];
+
+	  options = options || {};
+	  var max = options.max == null ? EXPANSION_MAX : options.max;
+	  var maxLength = options.maxLength == null ? EXPANSION_MAX_LENGTH : options.maxLength;
+
+	  // I don't know why Bash 4.3 does this, but it does.
+	  // Anything starting with {} will have the first two bytes preserved
+	  // but *only* at the top level, so {},a}b will not expand to anything,
+	  // but a{},b}c will be expanded to [a}c,abc].
+	  // One could argue that this is a bug in Bash, but since the goal of
+	  // this module is to match Bash's rules, we escape a leading {}
+	  if (str.substr(0, 2) === '{}') {
+	    str = '\\{\\}' + str.substr(2);
+	  }
+
+	  return expand(escapeBraces(str), max, maxLength, true).map(unescapeBraces);
+	}
+
+	function embrace(str) {
+	  return '{' + str + '}';
+	}
+	function isPadded(el) {
+	  return /^-?0\d/.test(el);
+	}
+
+	function lte(i, y) {
+	  return i <= y;
+	}
+	function gte(i, y) {
+	  return i >= y;
+	}
+
+	// Build `{ acc[a] + pre + values[v] }` for every combination, capping the
+	// number of results at `max` and the total number of characters at `maxLength`.
+	// This is the one place output grows, so bounding it here keeps the single
+	// accumulator - and therefore memory - flat regardless of how many brace groups
+	// are combined (CVE-2026-14257).
+	//
+	// `base[a]` is the length of the part of `acc[a]` that predates the current
+	// empty-drop baseline (see `expand`). The matching baselines for the results
+	// are appended to `outBase`, which the caller carries forward alongside them.
+	function combine(
+	  acc,
+	  base,
+	  pre,
+	  values,
+	  max,
+	  maxLength,
+	  dropEmpties,
+	  outBase
+	) {
+	  var out = [];
+	  var length = 0;
+	  for (var a = 0; a < acc.length; a++) {
+	    for (var v = 0; v < values.length; v++) {
+	      if (out.length >= max) return out
+	      var expansion = acc[a] + pre + values[v];
+	      // Bash drops empty results at the top level. Skip them before they count
+	      // against `max`, so `max` bounds the number of *kept* results. "Empty"
+	      // means "adds nothing past the baseline", not "empty overall".
+	      if (dropEmpties && expansion.length === base[a]) continue
+	      if (length + expansion.length > maxLength) return out
+	      out.push(expansion);
+	      outBase.push(base[a]);
+	      length += expansion.length;
+	    }
+	  }
+	  return out
+	}
+
+	// The expansion values of a single numeric (`1..5`) or alphabetic (`a..e..2`)
+	// sequence body.
+	function expandSequence(
+	  body,
+	  isAlphaSequence,
+	  max,
+	  maxLength
+	) {
+	  var n = body.split(/\.\./);
+	  var N = [];
+	  // A sequence body always splits into two or three parts, but the compiler
+	  // can't know that.
+	  /* c8 ignore start */
+	  if (n[0] === undefined || n[1] === undefined) {
+	    return N
+	  }
+	  /* c8 ignore stop */
+	  var x = numeric(n[0]);
+	  var y = numeric(n[1]);
+	  var width = Math.max(n[0].length, n[1].length);
+	  var incr =
+	    n.length === 3 && n[2] !== undefined ?
+	      Math.max(Math.abs(numeric(n[2])), 1)
+	    : 1;
+	  var test = lte;
+	  var reverse = y < x;
+	  if (reverse) {
+	    incr *= -1;
+	    test = gte;
+	  }
+	  var pad = n.some(isPadded);
+
+	  var length = 0;
+	  for (var i = x; test(i, y) && N.length < max; i += incr) {
+	    var c;
+	    if (isAlphaSequence) {
+	      c = String.fromCharCode(i);
+	      if (c === '\\') {
+	        c = '';
+	      }
+	    } else {
+	      c = String(i);
+	      if (pad) {
+	        var need = width - c.length;
+	        if (need > 0) {
+	          var z = new Array(need + 1).join('0');
+	          if (i < 0) {
+	            c = '-' + z + c.slice(1);
+	          } else {
+	            c = z + c;
+	          }
+	        }
+	      }
+	    }
+	    if (length + c.length > maxLength) break
+	    N.push(c);
+	    length += c.length;
+	  }
+	  return N
+	}
+
+	function expand(
+	  str,
+	  max,
+	  maxLength,
+	  isTop
+	) {
+	  // Consume the string's top-level brace groups left to right, threading a
+	  // running set of combined prefixes (`acc`). Expanding the tail iteratively -
+	  // rather than recursing on `m.post` once per group - keeps the native stack
+	  // depth constant, so deeply chained input (`'{a,b}'.repeat(3000)`) can no
+	  // longer overflow the stack, and leaves a single accumulator whose size
+	  // `maxLength` bounds directly (CVE-2026-14257).
+	  var acc = [''];
+
+	  // Bash drops empty results, but only when the *first* group of the run is a
+	  // comma set - a sequence like `{a..\}` may legitimately yield ''. The drop
+	  // is on the final strings, so it is applied to whichever `combine` produces
+	  // them (the one with no brace set left in the tail).
+	  //
+	  // The old implementation recursed on `m.post`, so the drop tested only the
+	  // expansion of the current call's substring. The `{a},b}` rewrite below turns
+	  // `isTop` back on part-way through a string, starting a fresh such run, so
+	  // the drop must ignore whatever `acc` already holds from earlier groups.
+	  // `accBase[a]` records how much of `acc[a]` predates the current run;
+	  // `combine` treats an expansion as empty when it adds nothing past that.
+	  var accBase = [0];
+	  var dropEmpties = false;
+	  var firstGroup = true;
+	  var nextBase;
+
+	  for (;;) {
+	    var m = balanced('{', '}', str);
+
+	    // No brace set left: the rest of the string is literal.
+	    if (!m) {
+	      return combine(acc, accBase, str, [''], max, maxLength, dropEmpties, [])
+	    }
+
+	    // no need to expand pre, since it is guaranteed to be free of brace-sets
+	    var pre = m.pre;
+
+	    // For compatibility reasons, `${` is not eligible for brace expansion, and
+	    // on the 1.x line it suppresses expansion of the rest of the string too:
+	    // the whole remainder is literal. The 2.x and 5.x lines instead keep
+	    // expanding the tail, which is what bash does, but changing that here would
+	    // be a breaking change for 1.x consumers. Routed through `combine` so the
+	    // result is still bounded by `max` and `maxLength`.
+	    if (/\$$/.test(pre)) {
+	      return combine(acc, accBase, str, [''], max, maxLength, dropEmpties, [])
+	    }
+
+	    var isNumericSequence = /^-?\d+\.\.-?\d+(?:\.\.-?\d+)?$/.test(m.body);
+	    var isAlphaSequence = /^[a-zA-Z]\.\.[a-zA-Z](?:\.\.-?\d+)?$/.test(m.body);
+	    var isSequence = isNumericSequence || isAlphaSequence;
+	    var isOptions = m.body.indexOf(',') >= 0;
+	    if (!isSequence && !isOptions) {
+	      // {a},b}
+	      if (m.post.match(/,(?!,).*\}/)) {
+	        str = m.pre + '{' + m.body + escClose + m.post;
+	        // The rewritten string is expanded as if it were a fresh top-level one,
+	        // so start a new empty-drop run: anchor the baseline at what `acc`
+	        // holds now, and let the next expanding group decide whether to drop.
+	        isTop = true;
+	        firstGroup = true;
+	        dropEmpties = false;
+	        accBase = [];
+	        for (var b = 0; b < acc.length; b++) {
+	          accBase.push(acc[b].length);
+	        }
+	        continue
+	      }
+	      // Nothing here expands, so the whole remaining string is literal.
+	      return combine(
+	        acc,
+	        accBase,
+	        pre + '{' + m.body + '}' + m.post,
+	        [''],
+	        max,
+	        maxLength,
+	        dropEmpties,
+	        []
+	      )
+	    }
+
+	    if (firstGroup) {
+	      dropEmpties = isTop && !isSequence;
+	      firstGroup = false;
+	    }
+
+	    var values;
+	    if (isSequence) {
+	      values = expandSequence(m.body, isAlphaSequence, max, maxLength);
+	    } else {
+	      var n = parseCommaParts(m.body);
+	      if (n.length === 1 && n[0] !== undefined) {
+	        // x{{a,b}}y ==> x{a}y x{b}y
+	        n = expand(n[0], max, maxLength, false).map(embrace);
+	        //XXX is this necessary? Can't seem to hit it in tests.
+	        /* c8 ignore start */
+	        if (n.length === 1) {
+	          nextBase = [];
+	          acc = combine(
+	            acc,
+	            accBase,
+	            pre + n[0],
+	            [''],
+	            max,
+	            maxLength,
+	            dropEmpties && !m.post.length,
+	            nextBase
+	          );
+	          accBase = nextBase;
+	          if (!m.post.length) break
+	          str = m.post;
+	          continue
+	        }
+	        /* c8 ignore stop */
+	      }
+
+	      // Values that `combine` is going to drop as empty produce no result, so
+	      // they must not count against `max` - otherwise `{a,,b}` with `max: 2`
+	      // would stop at `['a', '']` and yield one result instead of two. Skipping
+	      // them outright keeps `values` bounded while leaving `max` a bound on
+	      // *kept* results. A value is dropped when it adds nothing past the
+	      // baseline, which is what `combine` tests.
+	      var dropsEmpties = dropEmpties && !m.post.length && !pre;
+	      for (var d = 0; dropsEmpties && d < acc.length; d++) {
+	        if (acc[d].length !== accBase[d]) {
+	          dropsEmpties = false;
+	        }
+	      }
+
+	      values = [];
+	      var valuesLength = 0;
+	      outer: for (var j = 0; j < n.length; j++) {
+	        var expanded = expand(n[j], max, maxLength, false);
+	        for (var k = 0; k < expanded.length; k++) {
+	          var v = expanded[k];
+	          if (dropsEmpties && !v) continue
+	          if (values.length >= max || valuesLength + v.length > maxLength) {
+	            break outer
+	          }
+	          values.push(v);
+	          valuesLength += v.length;
+	        }
+	      }
+	    }
+
+	    nextBase = [];
+	    acc = combine(
+	      acc,
+	      accBase,
+	      pre,
+	      values,
+	      max,
+	      maxLength,
+	      dropEmpties && !m.post.length,
+	      nextBase
+	    );
+	    accBase = nextBase;
+	    if (!m.post.length) break
+	    str = m.post;
+	  }
+
+	  return acc
+	}
+	return braceExpansion;
+}
+
+var minimatch_1;
+var hasRequiredMinimatch;
+
+function requireMinimatch () {
+	if (hasRequiredMinimatch) return minimatch_1;
+	hasRequiredMinimatch = 1;
+	minimatch_1 = minimatch;
+	minimatch.Minimatch = Minimatch;
+
+	var path = (function () { try { return require('path') } catch (e) {}}()) || {
+	  sep: '/'
+	};
+	minimatch.sep = path.sep;
+
+	var GLOBSTAR = minimatch.GLOBSTAR = Minimatch.GLOBSTAR = {};
+	var expand = requireBraceExpansion();
+
+	var plTypes = {
+	  '!': { open: '(?:(?!(?:', close: '))[^/]*?)'},
+	  '?': { open: '(?:', close: ')?' },
+	  '+': { open: '(?:', close: ')+' },
+	  '*': { open: '(?:', close: ')*' },
+	  '@': { open: '(?:', close: ')' }
+	};
+
+	// any single thing other than /
+	// don't need to escape / when using new RegExp()
+	var qmark = '[^/]';
+
+	// * => any number of characters
+	var star = qmark + '*?';
+
+	// ** when dots are allowed.  Anything goes, except .. and .
+	// not (^ or / followed by one or two dots followed by $ or /),
+	// followed by anything, any number of times.
+	var twoStarDot = '(?:(?!(?:\\\/|^)(?:\\.{1,2})($|\\\/)).)*?';
+
+	// not a ^ or / followed by a dot,
+	// followed by anything, any number of times.
+	var twoStarNoDot = '(?:(?!(?:\\\/|^)\\.).)*?';
+
+	// characters that need to be escaped in RegExp.
+	var reSpecials = charSet('().*{}+?[]^$\\!');
+
+	// "abc" -> { a:true, b:true, c:true }
+	function charSet (s) {
+	  return s.split('').reduce(function (set, c) {
+	    set[c] = true;
+	    return set
+	  }, {})
+	}
+
+	// normalizes slashes.
+	var slashSplit = /\/+/;
+
+	minimatch.filter = filter;
+	function filter (pattern, options) {
+	  options = options || {};
+	  return function (p, i, list) {
+	    return minimatch(p, pattern, options)
+	  }
+	}
+
+	function ext (a, b) {
+	  b = b || {};
+	  var t = {};
+	  Object.keys(a).forEach(function (k) {
+	    t[k] = a[k];
+	  });
+	  Object.keys(b).forEach(function (k) {
+	    t[k] = b[k];
+	  });
+	  return t
+	}
+
+	minimatch.defaults = function (def) {
+	  if (!def || typeof def !== 'object' || !Object.keys(def).length) {
+	    return minimatch
+	  }
+
+	  var orig = minimatch;
+
+	  var m = function minimatch (p, pattern, options) {
+	    return orig(p, pattern, ext(def, options))
+	  };
+
+	  m.Minimatch = function Minimatch (pattern, options) {
+	    return new orig.Minimatch(pattern, ext(def, options))
+	  };
+	  m.Minimatch.defaults = function defaults (options) {
+	    return orig.defaults(ext(def, options)).Minimatch
+	  };
+
+	  m.filter = function filter (pattern, options) {
+	    return orig.filter(pattern, ext(def, options))
+	  };
+
+	  m.defaults = function defaults (options) {
+	    return orig.defaults(ext(def, options))
+	  };
+
+	  m.makeRe = function makeRe (pattern, options) {
+	    return orig.makeRe(pattern, ext(def, options))
+	  };
+
+	  m.braceExpand = function braceExpand (pattern, options) {
+	    return orig.braceExpand(pattern, ext(def, options))
+	  };
+
+	  m.match = function (list, pattern, options) {
+	    return orig.match(list, pattern, ext(def, options))
+	  };
+
+	  return m
+	};
+
+	Minimatch.defaults = function (def) {
+	  return minimatch.defaults(def).Minimatch
+	};
+
+	function minimatch (p, pattern, options) {
+	  assertValidPattern(pattern);
+
+	  if (!options) options = {};
+
+	  // shortcut: comments match nothing.
+	  if (!options.nocomment && pattern.charAt(0) === '#') {
+	    return false
+	  }
+
+	  return new Minimatch(pattern, options).match(p)
+	}
+
+	function Minimatch (pattern, options) {
+	  if (!(this instanceof Minimatch)) {
+	    return new Minimatch(pattern, options)
+	  }
+
+	  assertValidPattern(pattern);
+
+	  if (!options) options = {};
+
+	  pattern = pattern.trim();
+
+	  // windows support: need to use /, not \
+	  if (!options.allowWindowsEscape && path.sep !== '/') {
+	    pattern = pattern.split(path.sep).join('/');
+	  }
+
+	  this.options = options;
+	  this.maxGlobstarRecursion = options.maxGlobstarRecursion !== undefined
+	    ? options.maxGlobstarRecursion : 200;
+	  this.set = [];
+	  this.pattern = pattern;
+	  this.regexp = null;
+	  this.negate = false;
+	  this.comment = false;
+	  this.empty = false;
+	  this.partial = !!options.partial;
+
+	  // make the set of regexps etc.
+	  this.make();
+	}
+
+	Minimatch.prototype.debug = function () {};
+
+	Minimatch.prototype.make = make;
+	function make () {
+	  var pattern = this.pattern;
+	  var options = this.options;
+
+	  // empty patterns and comments match nothing.
+	  if (!options.nocomment && pattern.charAt(0) === '#') {
+	    this.comment = true;
+	    return
+	  }
+	  if (!pattern) {
+	    this.empty = true;
+	    return
+	  }
+
+	  // step 1: figure out negation, etc.
+	  this.parseNegate();
+
+	  // step 2: expand braces
+	  var set = this.globSet = this.braceExpand();
+
+	  if (options.debug) this.debug = function debug() { console.error.apply(console, arguments); };
+
+	  this.debug(this.pattern, set);
+
+	  // step 3: now we have a set, so turn each one into a series of path-portion
+	  // matching patterns.
+	  // These will be regexps, except in the case of "**", which is
+	  // set to the GLOBSTAR object for globstar behavior,
+	  // and will not contain any / characters
+	  set = this.globParts = set.map(function (s) {
+	    return s.split(slashSplit)
+	  });
+
+	  this.debug(this.pattern, set);
+
+	  // glob --> regexps
+	  set = set.map(function (s, si, set) {
+	    return s.map(this.parse, this)
+	  }, this);
+
+	  this.debug(this.pattern, set);
+
+	  // filter out everything that didn't compile properly.
+	  set = set.filter(function (s) {
+	    return s.indexOf(false) === -1
+	  });
+
+	  this.debug(this.pattern, set);
+
+	  this.set = set;
+	}
+
+	Minimatch.prototype.parseNegate = parseNegate;
+	function parseNegate () {
+	  var pattern = this.pattern;
+	  var negate = false;
+	  var options = this.options;
+	  var negateOffset = 0;
+
+	  if (options.nonegate) return
+
+	  for (var i = 0, l = pattern.length
+	    ; i < l && pattern.charAt(i) === '!'
+	    ; i++) {
+	    negate = !negate;
+	    negateOffset++;
+	  }
+
+	  if (negateOffset) this.pattern = pattern.substr(negateOffset);
+	  this.negate = negate;
+	}
+
+	// Brace expansion:
+	// a{b,c}d -> abd acd
+	// a{b,}c -> abc ac
+	// a{0..3}d -> a0d a1d a2d a3d
+	// a{b,c{d,e}f}g -> abg acdfg acefg
+	// a{b,c}d{e,f}g -> abdeg acdeg abdeg abdfg
+	//
+	// Invalid sets are not expanded.
+	// a{2..}b -> a{2..}b
+	// a{b}c -> a{b}c
+	minimatch.braceExpand = function (pattern, options) {
+	  return braceExpand(pattern, options)
+	};
+
+	Minimatch.prototype.braceExpand = braceExpand;
+
+	function braceExpand (pattern, options) {
+	  if (!options) {
+	    if (this instanceof Minimatch) {
+	      options = this.options;
+	    } else {
+	      options = {};
+	    }
+	  }
+
+	  pattern = typeof pattern === 'undefined'
+	    ? this.pattern : pattern;
+
+	  assertValidPattern(pattern);
+
+	  // Thanks to Yeting Li <https://github.com/yetingli> for
+	  // improving this regexp to avoid a ReDOS vulnerability.
+	  if (options.nobrace || !/\{(?:(?!\{).)*\}/.test(pattern)) {
+	    // shortcut. no need to expand.
+	    return [pattern]
+	  }
+
+	  return expand(pattern)
+	}
+
+	var MAX_PATTERN_LENGTH = 1024 * 64;
+	var assertValidPattern = function (pattern) {
+	  if (typeof pattern !== 'string') {
+	    throw new TypeError('invalid pattern')
+	  }
+
+	  if (pattern.length > MAX_PATTERN_LENGTH) {
+	    throw new TypeError('pattern is too long')
+	  }
+	};
+
+	// parse a component of the expanded set.
+	// At this point, no pattern may contain "/" in it
+	// so we're going to return a 2d array, where each entry is the full
+	// pattern, split on '/', and then turned into a regular expression.
+	// A regexp is made at the end which joins each array with an
+	// escaped /, and another full one which joins each regexp with |.
+	//
+	// Following the lead of Bash 4.1, note that "**" only has special meaning
+	// when it is the *only* thing in a path portion.  Otherwise, any series
+	// of * is equivalent to a single *.  Globstar behavior is enabled by
+	// default, and can be disabled by setting options.noglobstar.
+	Minimatch.prototype.parse = parse;
+	var SUBPARSE = {};
+	function parse (pattern, isSub) {
+	  assertValidPattern(pattern);
+
+	  var options = this.options;
+
+	  // shortcuts
+	  if (pattern === '**') {
+	    if (!options.noglobstar)
+	      return GLOBSTAR
+	    else
+	      pattern = '*';
+	  }
+	  if (pattern === '') return ''
+
+	  var re = '';
+	  var hasMagic = !!options.nocase;
+	  var escaping = false;
+	  // ? => one single character
+	  var patternListStack = [];
+	  var negativeLists = [];
+	  var stateChar;
+	  var inClass = false;
+	  var reClassStart = -1;
+	  var classStart = -1;
+	  // . and .. never match anything that doesn't start with .,
+	  // even when options.dot is set.
+	  var patternStart = pattern.charAt(0) === '.' ? '' // anything
+	  // not (start or / followed by . or .. followed by / or end)
+	  : options.dot ? '(?!(?:^|\\\/)\\.{1,2}(?:$|\\\/))'
+	  : '(?!\\.)';
+	  var self = this;
+
+	  function clearStateChar () {
+	    if (stateChar) {
+	      // we had some state-tracking character
+	      // that wasn't consumed by this pass.
+	      switch (stateChar) {
+	        case '*':
+	          re += star;
+	          hasMagic = true;
+	        break
+	        case '?':
+	          re += qmark;
+	          hasMagic = true;
+	        break
+	        default:
+	          re += '\\' + stateChar;
+	        break
+	      }
+	      self.debug('clearStateChar %j %j', stateChar, re);
+	      stateChar = false;
+	    }
+	  }
+
+	  for (var i = 0, len = pattern.length, c
+	    ; (i < len) && (c = pattern.charAt(i))
+	    ; i++) {
+	    this.debug('%s\t%s %s %j', pattern, i, re, c);
+
+	    // skip over any that are escaped.
+	    if (escaping && reSpecials[c]) {
+	      re += '\\' + c;
+	      escaping = false;
+	      continue
+	    }
+
+	    switch (c) {
+	      /* istanbul ignore next */
+	      case '/': {
+	        // completely not allowed, even escaped.
+	        // Should already be path-split by now.
+	        return false
+	      }
+
+	      case '\\':
+	        clearStateChar();
+	        escaping = true;
+	      continue
+
+	      // the various stateChar values
+	      // for the "extglob" stuff.
+	      case '?':
+	      case '*':
+	      case '+':
+	      case '@':
+	      case '!':
+	        this.debug('%s\t%s %s %j <-- stateChar', pattern, i, re, c);
+
+	        // all of those are literals inside a class, except that
+	        // the glob [!a] means [^a] in regexp
+	        if (inClass) {
+	          this.debug('  in class');
+	          if (c === '!' && i === classStart + 1) c = '^';
+	          re += c;
+	          continue
+	        }
+
+	        // coalesce consecutive non-globstar * characters
+	        if (c === '*' && stateChar === '*') continue
+
+	        // if we already have a stateChar, then it means
+	        // that there was something like ** or +? in there.
+	        // Handle the stateChar, then proceed with this one.
+	        self.debug('call clearStateChar %j', stateChar);
+	        clearStateChar();
+	        stateChar = c;
+	        // if extglob is disabled, then +(asdf|foo) isn't a thing.
+	        // just clear the statechar *now*, rather than even diving into
+	        // the patternList stuff.
+	        if (options.noext) clearStateChar();
+	      continue
+
+	      case '(':
+	        if (inClass) {
+	          re += '(';
+	          continue
+	        }
+
+	        if (!stateChar) {
+	          re += '\\(';
+	          continue
+	        }
+
+	        patternListStack.push({
+	          type: stateChar,
+	          start: i - 1,
+	          reStart: re.length,
+	          open: plTypes[stateChar].open,
+	          close: plTypes[stateChar].close
+	        });
+	        // negation is (?:(?!js)[^/]*)
+	        re += stateChar === '!' ? '(?:(?!(?:' : '(?:';
+	        this.debug('plType %j %j', stateChar, re);
+	        stateChar = false;
+	      continue
+
+	      case ')':
+	        if (inClass || !patternListStack.length) {
+	          re += '\\)';
+	          continue
+	        }
+
+	        clearStateChar();
+	        hasMagic = true;
+	        var pl = patternListStack.pop();
+	        // negation is (?:(?!js)[^/]*)
+	        // The others are (?:<pattern>)<type>
+	        re += pl.close;
+	        if (pl.type === '!') {
+	          negativeLists.push(pl);
+	        }
+	        pl.reEnd = re.length;
+	      continue
+
+	      case '|':
+	        if (inClass || !patternListStack.length || escaping) {
+	          re += '\\|';
+	          escaping = false;
+	          continue
+	        }
+
+	        clearStateChar();
+	        re += '|';
+	      continue
+
+	      // these are mostly the same in regexp and glob
+	      case '[':
+	        // swallow any state-tracking char before the [
+	        clearStateChar();
+
+	        if (inClass) {
+	          re += '\\' + c;
+	          continue
+	        }
+
+	        inClass = true;
+	        classStart = i;
+	        reClassStart = re.length;
+	        re += c;
+	      continue
+
+	      case ']':
+	        //  a right bracket shall lose its special
+	        //  meaning and represent itself in
+	        //  a bracket expression if it occurs
+	        //  first in the list.  -- POSIX.2 2.8.3.2
+	        if (i === classStart + 1 || !inClass) {
+	          re += '\\' + c;
+	          escaping = false;
+	          continue
+	        }
+
+	        // handle the case where we left a class open.
+	        // "[z-a]" is valid, equivalent to "\[z-a\]"
+	        // split where the last [ was, make sure we don't have
+	        // an invalid re. if so, re-walk the contents of the
+	        // would-be class to re-translate any characters that
+	        // were passed through as-is
+	        // TODO: It would probably be faster to determine this
+	        // without a try/catch and a new RegExp, but it's tricky
+	        // to do safely.  For now, this is safe and works.
+	        var cs = pattern.substring(classStart + 1, i);
+	        try {
+	          RegExp('[' + cs + ']');
+	        } catch (er) {
+	          // not a valid class!
+	          var sp = this.parse(cs, SUBPARSE);
+	          re = re.substr(0, reClassStart) + '\\[' + sp[0] + '\\]';
+	          hasMagic = hasMagic || sp[1];
+	          inClass = false;
+	          continue
+	        }
+
+	        // finish up the class.
+	        hasMagic = true;
+	        inClass = false;
+	        re += c;
+	      continue
+
+	      default:
+	        // swallow any state char that wasn't consumed
+	        clearStateChar();
+
+	        if (escaping) {
+	          // no need
+	          escaping = false;
+	        } else if (reSpecials[c]
+	          && !(c === '^' && inClass)) {
+	          re += '\\';
+	        }
+
+	        re += c;
+
+	    } // switch
+	  } // for
+
+	  // handle the case where we left a class open.
+	  // "[abc" is valid, equivalent to "\[abc"
+	  if (inClass) {
+	    // split where the last [ was, and escape it
+	    // this is a huge pita.  We now have to re-walk
+	    // the contents of the would-be class to re-translate
+	    // any characters that were passed through as-is
+	    cs = pattern.substr(classStart + 1);
+	    sp = this.parse(cs, SUBPARSE);
+	    re = re.substr(0, reClassStart) + '\\[' + sp[0];
+	    hasMagic = hasMagic || sp[1];
+	  }
+
+	  // handle the case where we had a +( thing at the *end*
+	  // of the pattern.
+	  // each pattern list stack adds 3 chars, and we need to go through
+	  // and escape any | chars that were passed through as-is for the regexp.
+	  // Go through and escape them, taking care not to double-escape any
+	  // | chars that were already escaped.
+	  for (pl = patternListStack.pop(); pl; pl = patternListStack.pop()) {
+	    var tail = re.slice(pl.reStart + pl.open.length);
+	    this.debug('setting tail', re, pl);
+	    // maybe some even number of \, then maybe 1 \, followed by a |
+	    tail = tail.replace(/((?:\\{2}){0,64})(\\?)\|/g, function (_, $1, $2) {
+	      if (!$2) {
+	        // the | isn't already escaped, so escape it.
+	        $2 = '\\';
+	      }
+
+	      // need to escape all those slashes *again*, without escaping the
+	      // one that we need for escaping the | character.  As it works out,
+	      // escaping an even number of slashes can be done by simply repeating
+	      // it exactly after itself.  That's why this trick works.
+	      //
+	      // I am sorry that you have to see this.
+	      return $1 + $1 + $2 + '|'
+	    });
+
+	    this.debug('tail=%j\n   %s', tail, tail, pl, re);
+	    var t = pl.type === '*' ? star
+	      : pl.type === '?' ? qmark
+	      : '\\' + pl.type;
+
+	    hasMagic = true;
+	    re = re.slice(0, pl.reStart) + t + '\\(' + tail;
+	  }
+
+	  // handle trailing things that only matter at the very end.
+	  clearStateChar();
+	  if (escaping) {
+	    // trailing \\
+	    re += '\\\\';
+	  }
+
+	  // only need to apply the nodot start if the re starts with
+	  // something that could conceivably capture a dot
+	  var addPatternStart = false;
+	  switch (re.charAt(0)) {
+	    case '[': case '.': case '(': addPatternStart = true;
+	  }
+
+	  // Hack to work around lack of negative lookbehind in JS
+	  // A pattern like: *.!(x).!(y|z) needs to ensure that a name
+	  // like 'a.xyz.yz' doesn't match.  So, the first negative
+	  // lookahead, has to look ALL the way ahead, to the end of
+	  // the pattern.
+	  for (var n = negativeLists.length - 1; n > -1; n--) {
+	    var nl = negativeLists[n];
+
+	    var nlBefore = re.slice(0, nl.reStart);
+	    var nlFirst = re.slice(nl.reStart, nl.reEnd - 8);
+	    var nlLast = re.slice(nl.reEnd - 8, nl.reEnd);
+	    var nlAfter = re.slice(nl.reEnd);
+
+	    nlLast += nlAfter;
+
+	    // Handle nested stuff like *(*.js|!(*.json)), where open parens
+	    // mean that we should *not* include the ) in the bit that is considered
+	    // "after" the negated section.
+	    var openParensBefore = nlBefore.split('(').length - 1;
+	    var cleanAfter = nlAfter;
+	    for (i = 0; i < openParensBefore; i++) {
+	      cleanAfter = cleanAfter.replace(/\)[+*?]?/, '');
+	    }
+	    nlAfter = cleanAfter;
+
+	    var dollar = '';
+	    if (nlAfter === '' && isSub !== SUBPARSE) {
+	      dollar = '$';
+	    }
+	    var newRe = nlBefore + nlFirst + nlAfter + dollar + nlLast;
+	    re = newRe;
+	  }
+
+	  // if the re is not "" at this point, then we need to make sure
+	  // it doesn't match against an empty path part.
+	  // Otherwise a/* will match a/, which it should not.
+	  if (re !== '' && hasMagic) {
+	    re = '(?=.)' + re;
+	  }
+
+	  if (addPatternStart) {
+	    re = patternStart + re;
+	  }
+
+	  // parsing just a piece of a larger pattern.
+	  if (isSub === SUBPARSE) {
+	    return [re, hasMagic]
+	  }
+
+	  // skip the regexp for non-magical patterns
+	  // unescape anything in it, though, so that it'll be
+	  // an exact match against a file etc.
+	  if (!hasMagic) {
+	    return globUnescape(pattern)
+	  }
+
+	  var flags = options.nocase ? 'i' : '';
+	  try {
+	    var regExp = new RegExp('^' + re + '$', flags);
+	  } catch (er) /* istanbul ignore next - should be impossible */ {
+	    // If it was an invalid regular expression, then it can't match
+	    // anything.  This trick looks for a character after the end of
+	    // the string, which is of course impossible, except in multi-line
+	    // mode, but it's not a /m regex.
+	    return new RegExp('$.')
+	  }
+
+	  regExp._glob = pattern;
+	  regExp._src = re;
+
+	  return regExp
+	}
+
+	minimatch.makeRe = function (pattern, options) {
+	  return new Minimatch(pattern, options || {}).makeRe()
+	};
+
+	Minimatch.prototype.makeRe = makeRe;
+	function makeRe () {
+	  if (this.regexp || this.regexp === false) return this.regexp
+
+	  // at this point, this.set is a 2d array of partial
+	  // pattern strings, or "**".
+	  //
+	  // It's better to use .match().  This function shouldn't
+	  // be used, really, but it's pretty convenient sometimes,
+	  // when you just want to work with a regex.
+	  var set = this.set;
+
+	  if (!set.length) {
+	    this.regexp = false;
+	    return this.regexp
+	  }
+	  var options = this.options;
+
+	  var twoStar = options.noglobstar ? star
+	    : options.dot ? twoStarDot
+	    : twoStarNoDot;
+	  var flags = options.nocase ? 'i' : '';
+
+	  var re = set.map(function (pattern) {
+	    return pattern.map(function (p) {
+	      return (p === GLOBSTAR) ? twoStar
+	      : (typeof p === 'string') ? regExpEscape(p)
+	      : p._src
+	    }).join('\\\/')
+	  }).join('|');
+
+	  // must match entire pattern
+	  // ending in a * or ** will make it less strict.
+	  re = '^(?:' + re + ')$';
+
+	  // can match anything, as long as it's not this.
+	  if (this.negate) re = '^(?!' + re + ').*$';
+
+	  try {
+	    this.regexp = new RegExp(re, flags);
+	  } catch (ex) /* istanbul ignore next - should be impossible */ {
+	    this.regexp = false;
+	  }
+	  return this.regexp
+	}
+
+	minimatch.match = function (list, pattern, options) {
+	  options = options || {};
+	  var mm = new Minimatch(pattern, options);
+	  list = list.filter(function (f) {
+	    return mm.match(f)
+	  });
+	  if (mm.options.nonull && !list.length) {
+	    list.push(pattern);
+	  }
+	  return list
+	};
+
+	Minimatch.prototype.match = function match (f, partial) {
+	  if (typeof partial === 'undefined') partial = this.partial;
+	  this.debug('match', f, this.pattern);
+	  // short-circuit in the case of busted things.
+	  // comments, etc.
+	  if (this.comment) return false
+	  if (this.empty) return f === ''
+
+	  if (f === '/' && partial) return true
+
+	  var options = this.options;
+
+	  // windows: need to use /, not \
+	  if (path.sep !== '/') {
+	    f = f.split(path.sep).join('/');
+	  }
+
+	  // treat the test path as a set of pathparts.
+	  f = f.split(slashSplit);
+	  this.debug(this.pattern, 'split', f);
+
+	  // just ONE of the pattern sets in this.set needs to match
+	  // in order for it to be valid.  If negating, then just one
+	  // match means that we have failed.
+	  // Either way, return on the first hit.
+
+	  var set = this.set;
+	  this.debug(this.pattern, 'set', set);
+
+	  // Find the basename of the path by looking for the last non-empty segment
+	  var filename;
+	  var i;
+	  for (i = f.length - 1; i >= 0; i--) {
+	    filename = f[i];
+	    if (filename) break
+	  }
+
+	  for (i = 0; i < set.length; i++) {
+	    var pattern = set[i];
+	    var file = f;
+	    if (options.matchBase && pattern.length === 1) {
+	      file = [filename];
+	    }
+	    var hit = this.matchOne(file, pattern, partial);
+	    if (hit) {
+	      if (options.flipNegate) return true
+	      return !this.negate
+	    }
+	  }
+
+	  // didn't get any hits.  this is success if it's a negative
+	  // pattern, failure otherwise.
+	  if (options.flipNegate) return false
+	  return this.negate
+	};
+
+	// set partial to true to test if, for example,
+	// "/a/b" matches the start of "/*/b/*/d"
+	// Partial means, if you run out of file before you run
+	// out of pattern, then that's fine, as long as all
+	// the parts match.
+	Minimatch.prototype.matchOne = function (file, pattern, partial) {
+	  if (pattern.indexOf(GLOBSTAR) !== -1) {
+	    return this._matchGlobstar(file, pattern, partial, 0, 0)
+	  }
+	  return this._matchOne(file, pattern, partial, 0, 0)
+	};
+
+	Minimatch.prototype._matchGlobstar = function (file, pattern, partial, fileIndex, patternIndex) {
+	  var i;
+
+	  // find first globstar from patternIndex
+	  var firstgs = -1;
+	  for (i = patternIndex; i < pattern.length; i++) {
+	    if (pattern[i] === GLOBSTAR) { firstgs = i; break }
+	  }
+
+	  // find last globstar
+	  var lastgs = -1;
+	  for (i = pattern.length - 1; i >= 0; i--) {
+	    if (pattern[i] === GLOBSTAR) { lastgs = i; break }
+	  }
+
+	  var head = pattern.slice(patternIndex, firstgs);
+	  var body = partial ? pattern.slice(firstgs + 1) : pattern.slice(firstgs + 1, lastgs);
+	  var tail = partial ? [] : pattern.slice(lastgs + 1);
+
+	  // check the head
+	  if (head.length) {
+	    var fileHead = file.slice(fileIndex, fileIndex + head.length);
+	    if (!this._matchOne(fileHead, head, partial, 0, 0)) {
+	      return false
+	    }
+	    fileIndex += head.length;
+	  }
+
+	  // check the tail
+	  var fileTailMatch = 0;
+	  if (tail.length) {
+	    if (tail.length + fileIndex > file.length) return false
+
+	    var tailStart = file.length - tail.length;
+	    if (this._matchOne(file, tail, partial, tailStart, 0)) {
+	      fileTailMatch = tail.length;
+	    } else {
+	      // affordance for stuff like a/**/* matching a/b/
+	      if (file[file.length - 1] !== '' ||
+	          fileIndex + tail.length === file.length) {
+	        return false
+	      }
+	      tailStart--;
+	      if (!this._matchOne(file, tail, partial, tailStart, 0)) {
+	        return false
+	      }
+	      fileTailMatch = tail.length + 1;
+	    }
+	  }
+
+	  // if body is empty (single ** between head and tail)
+	  if (!body.length) {
+	    var sawSome = !!fileTailMatch;
+	    for (i = fileIndex; i < file.length - fileTailMatch; i++) {
+	      var f = String(file[i]);
+	      sawSome = true;
+	      if (f === '.' || f === '..' ||
+	          (!this.options.dot && f.charAt(0) === '.')) {
+	        return false
+	      }
+	    }
+	    return partial || sawSome
+	  }
+
+	  // split body into segments at each GLOBSTAR
+	  var bodySegments = [[[], 0]];
+	  var currentBody = bodySegments[0];
+	  var nonGsParts = 0;
+	  var nonGsPartsSums = [0];
+	  for (var bi = 0; bi < body.length; bi++) {
+	    var b = body[bi];
+	    if (b === GLOBSTAR) {
+	      nonGsPartsSums.push(nonGsParts);
+	      currentBody = [[], 0];
+	      bodySegments.push(currentBody);
+	    } else {
+	      currentBody[0].push(b);
+	      nonGsParts++;
+	    }
+	  }
+
+	  var idx = bodySegments.length - 1;
+	  var fileLength = file.length - fileTailMatch;
+	  for (var si = 0; si < bodySegments.length; si++) {
+	    bodySegments[si][1] = fileLength -
+	      (nonGsPartsSums[idx--] + bodySegments[si][0].length);
+	  }
+
+	  return !!this._matchGlobStarBodySections(
+	    file, bodySegments, fileIndex, 0, partial, 0, !!fileTailMatch
+	  )
+	};
+
+	// return false for "nope, not matching"
+	// return null for "not matching, cannot keep trying"
+	Minimatch.prototype._matchGlobStarBodySections = function (
+	  file, bodySegments, fileIndex, bodyIndex, partial, globStarDepth, sawTail
+	) {
+	  var bs = bodySegments[bodyIndex];
+	  if (!bs) {
+	    // just make sure there are no bad dots
+	    for (var i = fileIndex; i < file.length; i++) {
+	      sawTail = true;
+	      var f = file[i];
+	      if (f === '.' || f === '..' ||
+	          (!this.options.dot && f.charAt(0) === '.')) {
+	        return false
+	      }
+	    }
+	    return sawTail
+	  }
+
+	  var body = bs[0];
+	  var after = bs[1];
+	  while (fileIndex <= after) {
+	    var m = this._matchOne(
+	      file.slice(0, fileIndex + body.length),
+	      body,
+	      partial,
+	      fileIndex,
+	      0
+	    );
+	    // if limit exceeded, no match. intentional false negative,
+	    // acceptable break in correctness for security.
+	    if (m && globStarDepth < this.maxGlobstarRecursion) {
+	      var sub = this._matchGlobStarBodySections(
+	        file, bodySegments,
+	        fileIndex + body.length, bodyIndex + 1,
+	        partial, globStarDepth + 1, sawTail
+	      );
+	      if (sub !== false) {
+	        return sub
+	      }
+	    }
+	    var f = file[fileIndex];
+	    if (f === '.' || f === '..' ||
+	        (!this.options.dot && f.charAt(0) === '.')) {
+	      return false
+	    }
+	    fileIndex++;
+	  }
+	  return partial || null
+	};
+
+	Minimatch.prototype._matchOne = function (file, pattern, partial, fileIndex, patternIndex) {
+	  var fi, pi, fl, pl;
+	  for (
+	    fi = fileIndex, pi = patternIndex, fl = file.length, pl = pattern.length
+	    ; (fi < fl) && (pi < pl)
+	    ; fi++, pi++
+	  ) {
+	    this.debug('matchOne loop');
+	    var p = pattern[pi];
+	    var f = file[fi];
+
+	    this.debug(pattern, p, f);
+
+	    // should be impossible.
+	    // some invalid regexp stuff in the set.
+	    /* istanbul ignore if */
+	    if (p === false || p === GLOBSTAR) return false
+
+	    // something other than **
+	    // non-magic patterns just have to match exactly
+	    // patterns with magic have been turned into regexps.
+	    var hit;
+	    if (typeof p === 'string') {
+	      hit = f === p;
+	      this.debug('string match', p, f, hit);
+	    } else {
+	      hit = f.match(p);
+	      this.debug('pattern match', p, f, hit);
+	    }
+
+	    if (!hit) return false
+	  }
+
+	  // now either we fell off the end of the pattern, or we're done.
+	  if (fi === fl && pi === pl) {
+	    // ran out of pattern and filename at the same time.
+	    // an exact hit!
+	    return true
+	  } else if (fi === fl) {
+	    // ran out of file, but still had pattern left.
+	    // this is ok if we're doing the match as part of
+	    // a glob fs traversal.
+	    return partial
+	  } else /* istanbul ignore else */ if (pi === pl) {
+	    // ran out of pattern, still have file left.
+	    // this is only acceptable if we're on the very last
+	    // empty segment of a file with a trailing slash.
+	    // a/* should match a/b/
+	    return (fi === fl - 1) && (file[fi] === '')
+	  }
+
+	  // should be unreachable.
+	  /* istanbul ignore next */
+	  throw new Error('wtf?')
+	};
+
+	// replace stuff like \* with *
+	function globUnescape (s) {
+	  return s.replace(/\\(.)/g, '$1')
+	}
+
+	function regExpEscape (s) {
+	  return s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
+	}
+	return minimatch_1;
+}
 
 var internalPath = {};
 
@@ -153437,7 +154907,7 @@ function requireDownloadUtils () {
 
 var uploadUtils = {};
 
-/*! Axios v1.19.0 Copyright (c) 2026 Matt Zabriskie and contributors */
+/*! Axios v1.20.0 Copyright (c) 2026 Matt Zabriskie and contributors */
 
 var axios_1;
 var hasRequiredAxios;
@@ -153490,13 +154960,57 @@ function requireAxios () {
 	const hasOwnProperty = (({
 	  hasOwnProperty
 	}) => (obj, prop) => hasOwnProperty.call(obj, prop))(Object.prototype);
+	const isUnsafeObjectKey = prop => typeof prop === 'string' && (prop === '__proto__' || prop === 'constructor' || prop === 'prototype');
 
 	/**
-	 * Walk the prototype chain (excluding the shared Object.prototype) looking for
-	 * an own `prop`. This distinguishes genuine own/inherited members — including
-	 * class accessors and template prototypes — from members injected via
-	 * Object.prototype pollution (e.g. `Object.prototype.username = '...'`), which
-	 * live on Object.prototype itself and are therefore never matched.
+	 * Determine whether an inherited object must be treated as a shared-prototype
+	 * boundary. Cross-realm Object.prototype objects cannot be distinguished
+	 * reliably from application-created null-prototype objects because their
+	 * properties are mutable, so all inherited terminal prototypes are excluded
+	 * as a fail-closed boundary. A null-prototype source still keeps its own
+	 * properties, as produced by mergeConfig and other safe materialization paths.
+	 *
+	 * @param {*} obj The object to inspect
+	 * @param {*} prototype The object's prototype
+	 * @param {boolean} source Whether obj is the original traversal source
+	 *
+	 * @returns {boolean} True when obj is a safe prototype traversal boundary
+	 */
+	const isPrototypeBoundary = (obj, prototype, source) => obj === Object.prototype || !source && prototype === null;
+
+	/**
+	 * Determine whether an object can retain its identity through code paths that
+	 * add, replace, and remove config properties without bypassing unsafe-key
+	 * filtering. Immutable objects, unsafe-key-bearing objects, and objects with
+	 * accessor or restricted data properties must be materialized instead.
+	 *
+	 * @param {*} obj The object to inspect
+	 *
+	 * @returns {boolean} True when every own property is safe and fully mutable
+	 */
+	const isSafeAndFullyMutable = obj => {
+	  if (!Object.isExtensible(obj)) {
+	    return false;
+	  }
+	  const props = Object.getOwnPropertyNames(obj);
+	  if (Object.getOwnPropertySymbols) {
+	    props.push(...Object.getOwnPropertySymbols(obj));
+	  }
+	  return props.every(prop => {
+	    if (isUnsafeObjectKey(prop)) {
+	      return false;
+	    }
+	    const descriptor = Object.getOwnPropertyDescriptor(obj, prop);
+	    return !!descriptor && descriptor.configurable && descriptor.writable === true;
+	  });
+	};
+
+	/**
+	 * Walk the prototype chain (excluding the source realm's Object.prototype)
+	 * looking for an own `prop`. This distinguishes genuine own/inherited members
+	 * — including class accessors and template prototypes — from members injected
+	 * via Object.prototype pollution (e.g. `Object.prototype.username = '...'`),
+	 * which live on Object.prototype itself and are therefore never matched.
 	 *
 	 * @param {*} thing The value whose chain to inspect
 	 * @param {string|symbol} prop The property key to look for
@@ -153506,15 +155020,19 @@ function requireAxios () {
 	const hasOwnInPrototypeChain = (thing, prop) => {
 	  let obj = thing;
 	  const seen = [];
-	  while (obj != null && obj !== Object.prototype) {
+	  while (obj != null) {
 	    if (seen.indexOf(obj) !== -1) {
 	      return false;
 	    }
 	    seen.push(obj);
+	    const prototype = getPrototypeOf(obj);
+	    if (isPrototypeBoundary(obj, prototype, obj === thing)) {
+	      return false;
+	    }
 	    if (hasOwnProperty(obj, prop)) {
 	      return true;
 	    }
-	    obj = getPrototypeOf(obj);
+	    obj = prototype;
 	  }
 	  return false;
 	};
@@ -153531,6 +155049,56 @@ function requireAxios () {
 	 * @returns {*} The resolved value, or undefined when unsafe/absent
 	 */
 	const getSafeProp = (obj, prop) => obj != null && hasOwnInPrototypeChain(obj, prop) ? obj[prop] : undefined;
+
+	/**
+	 * Flatten an object and its application-defined prototype chain into a
+	 * null-prototype object. Members inherited only from the source realm's
+	 * Object.prototype are deliberately excluded, while class/template members
+	 * below that boundary are preserved.
+	 *
+	 * @param {*} thing The value to flatten
+	 *
+	 * @returns {*} A null-prototype copy, or the original value when it is already
+	 * structurally safe or is not an object
+	 */
+	const toSafeFlatObject = thing => {
+	  if (thing == null || typeof thing !== 'object' && typeof thing !== 'function') {
+	    return thing;
+	  }
+	  const sourcePrototype = getPrototypeOf(thing);
+	  if (sourcePrototype === null && isSafeAndFullyMutable(thing)) {
+	    return thing;
+	  }
+	  const result = Object.create(null);
+	  const merged = Object.create(null);
+	  const seen = [];
+	  let current = thing;
+	  while (current != null) {
+	    if (seen.indexOf(current) !== -1) {
+	      break;
+	    }
+	    seen.push(current);
+	    const prototype = current === thing ? sourcePrototype : getPrototypeOf(current);
+	    if (isPrototypeBoundary(current, prototype, current === thing)) {
+	      break;
+	    }
+	    const props = Object.getOwnPropertyNames(current);
+	    if (Object.getOwnPropertySymbols) {
+	      props.push(...Object.getOwnPropertySymbols(current));
+	    }
+	    for (const prop of props) {
+	      if (isUnsafeObjectKey(prop)) {
+	        continue;
+	      }
+	      if (!hasOwnProperty(merged, prop)) {
+	        result[prop] = thing[prop];
+	        merged[prop] = true;
+	      }
+	    }
+	    current = prototype;
+	  }
+	  return result;
+	};
 	const kindOf = (cache => thing => {
 	  const str = toString.call(thing);
 	  return cache[str] || (cache[str] = str.slice(8, -1).toLowerCase());
@@ -153654,9 +155222,9 @@ function requireAxios () {
 	  }
 	  const prototype = getPrototypeOf(val);
 	  return (prototype === null || prototype === Object.prototype || getPrototypeOf(prototype) === null) &&
-	  // Treat any genuine (non-Object.prototype-polluted) Symbol.toStringTag or
-	  // Symbol.iterator as evidence the value is a tagged/iterable type rather
-	  // than a plain object, while ignoring keys injected onto Object.prototype.
+	  // Treat safe own/inherited Symbol.toStringTag or Symbol.iterator members as
+	  // evidence the value is tagged/iterable, while ignoring members reachable
+	  // only through shared or terminal prototype boundaries.
 	  !hasOwnInPrototypeChain(val, toStringTag) && !hasOwnInPrototypeChain(val, iterator);
 	};
 
@@ -154404,6 +155972,7 @@ function requireAxios () {
 	  // an alias to avoid ESLint no-prototype-builtins detection
 	  hasOwnInPrototypeChain,
 	  getSafeProp,
+	  toSafeFlatObject,
 	  reduceDescriptors,
 	  freezeMethods,
 	  toObjectSet,
@@ -154508,7 +156077,7 @@ function requireAxios () {
 	  return byteStringHeaders;
 	}
 
-	const $internals = Symbol('internals');
+	const $internals$1 = Symbol('internals');
 	function normalizeHeader(header) {
 	  return header && String(header).trim().toLowerCase();
 	}
@@ -154806,7 +156375,7 @@ function requireAxios () {
 	    return computed;
 	  }
 	  static accessor(header) {
-	    const internals = this[$internals] = this[$internals] = {
+	    const internals = this[$internals$1] = this[$internals$1] = {
 	      accessors: {}
 	    };
 	    const accessors = internals.accessors;
@@ -155121,23 +156690,17 @@ function requireAxios () {
 
 	  // eslint-disable-next-line no-param-reassign
 	  formData = formData || new (FormData$1 || FormData)();
-
-	  // eslint-disable-next-line no-param-reassign
-	  options = utils$1.toFlatObject(options, {
-	    metaTokens: true,
-	    dots: false,
-	    indexes: false
-	  }, false, function defined(option, source) {
-	    // eslint-disable-next-line no-eq-null,eqeqeq
-	    return !utils$1.isUndefined(source[option]);
-	  });
-	  const metaTokens = options.metaTokens;
+	  const option = (name, fallback) => {
+	    const value = utils$1.getSafeProp(options, name);
+	    return utils$1.isUndefined(value) ? fallback : value;
+	  };
+	  const metaTokens = option('metaTokens', true);
 	  // eslint-disable-next-line no-use-before-define
-	  const visitor = options.visitor || defaultVisitor;
-	  const dots = options.dots;
-	  const indexes = options.indexes;
-	  const _Blob = options.Blob || typeof Blob !== 'undefined' && Blob;
-	  const maxDepth = options.maxDepth === undefined ? DEFAULT_FORM_DATA_MAX_DEPTH : options.maxDepth;
+	  const visitor = option('visitor') || defaultVisitor;
+	  const dots = option('dots', false);
+	  const indexes = option('indexes', false);
+	  const _Blob = option('Blob') || typeof Blob !== 'undefined' && Blob;
+	  const maxDepth = option('maxDepth', DEFAULT_FORM_DATA_MAX_DEPTH);
 	  const useBlob = _Blob && utils$1.isSpecCompliantForm(formData);
 	  const stack = [];
 	  if (!utils$1.isFunction(visitor)) {
@@ -155350,9 +156913,51 @@ function requireAxios () {
 	  return url;
 	}
 
+	const $internals = Symbol('internals');
+
+	// `handlers` is public and may be replaced with a nullish value by user code;
+	// `clear()` has always tolerated that. Treat it as an empty stack rather than
+	// dereferencing it.
+	function countHandlers(handlers) {
+	  return handlers ? handlers.length : 0;
+	}
+	function trimHandlers(handlers) {
+	  if (!handlers) {
+	    return;
+	  }
+	  while (handlers.length && handlers[handlers.length - 1] === null) {
+	    handlers.pop();
+	  }
+	}
+	function syncHandlerEntries(manager, internals) {
+	  const handlers = manager.handlers;
+	  const length = countHandlers(handlers);
+	  if (handlers !== internals.handlersRef) {
+	    internals.handlersRef = handlers;
+	    internals.handlerEntries.clear();
+	  } else if (length !== internals.handlersLength) {
+	    if (!length) {
+	      internals.handlerEntries.clear();
+	    } else {
+	      internals.handlerEntries.forEach(function removeStaleEntry(entry, id) {
+	        if (handlers[entry.index] !== entry.handler) {
+	          internals.handlerEntries.delete(id);
+	        }
+	      });
+	    }
+	  }
+	  internals.handlersLength = length;
+	}
 	class InterceptorManager {
 	  constructor() {
 	    this.handlers = [];
+	    this[$internals] = {
+	      handlersRef: this.handlers,
+	      handlersLength: this.handlers.length,
+	      handlerEntries: new Map(),
+	      iterationDepth: 0,
+	      nextId: 0
+	    };
 	  }
 
 	  /**
@@ -155365,13 +156970,25 @@ function requireAxios () {
 	   * @return {Number} An ID used to remove interceptor later
 	   */
 	  use(fulfilled, rejected, options) {
-	    this.handlers.push({
+	    const handler = {
 	      fulfilled,
 	      rejected,
 	      synchronous: options ? options.synchronous : false,
 	      runWhen: options ? options.runWhen : null
+	    };
+	    const internals = this[$internals];
+	    if (this.handlers == null) {
+	      this.handlers = [];
+	    }
+	    syncHandlerEntries(this, internals);
+	    const id = internals.nextId++;
+	    this.handlers.push(handler);
+	    internals.handlerEntries.set(id, {
+	      handler,
+	      index: this.handlers.length - 1
 	    });
-	    return this.handlers.length - 1;
+	    internals.handlersLength = this.handlers.length;
+	    return id;
 	  }
 
 	  /**
@@ -155382,8 +156999,23 @@ function requireAxios () {
 	   * @returns {void}
 	   */
 	  eject(id) {
-	    if (this.handlers[id]) {
-	      this.handlers[id] = null;
+	    const internals = this[$internals];
+	    syncHandlerEntries(this, internals);
+	    const entry = internals.handlerEntries.get(id);
+	    if (entry) {
+	      internals.handlerEntries.delete(id);
+
+	      // Ignore IDs invalidated by clear or direct replacement of handlers.
+	      if (this.handlers[entry.index] !== entry.handler) {
+	        return;
+	      }
+	      this.handlers[entry.index] = null;
+
+	      // Do not reuse an index while forEach is walking its length snapshot.
+	      if (!internals.iterationDepth) {
+	        trimHandlers(this.handlers);
+	        internals.handlersLength = this.handlers.length;
+	      }
 	    }
 	  }
 
@@ -155395,6 +157027,7 @@ function requireAxios () {
 	  clear() {
 	    if (this.handlers) {
 	      this.handlers = [];
+	      syncHandlerEntries(this, this[$internals]);
 	    }
 	  }
 
@@ -155409,11 +157042,22 @@ function requireAxios () {
 	   * @returns {void}
 	   */
 	  forEach(fn) {
-	    utils$1.forEach(this.handlers, function forEachHandler(h) {
-	      if (h !== null) {
-	        fn(h);
+	    const internals = this[$internals];
+	    syncHandlerEntries(this, internals);
+	    internals.iterationDepth++;
+	    try {
+	      utils$1.forEach(this.handlers, function forEachHandler(h) {
+	        if (h !== null) {
+	          fn(h);
+	        }
+	      });
+	    } finally {
+	      if (! --internals.iterationDepth) {
+	        syncHandlerEntries(this, internals);
+	        trimHandlers(this.handlers);
+	        internals.handlersLength = countHandlers(this.handlers);
 	      }
-	    });
+	    }
 	  }
 	}
 
@@ -155621,6 +157265,8 @@ function requireAxios () {
 	  return null;
 	}
 
+	const methodList = Object.freeze(['get', 'delete', 'head', 'options', 'post', 'put', 'patch', 'purge', 'link', 'unlink', 'query']);
+
 	const own = (obj, key) => obj != null && utils$1.hasOwnProp(obj, key) ? obj[key] : undefined;
 
 	/**
@@ -155737,7 +157383,7 @@ function requireAxios () {
 	    }
 	  }
 	};
-	utils$1.forEach(['delete', 'get', 'head', 'post', 'put', 'patch', 'query'], method => {
+	utils$1.forEach(methodList, method => {
 	  defaults.headers[method] = {};
 	});
 
@@ -155836,18 +157482,27 @@ function requireAxios () {
 	  return baseURL.slice(0, end) + '/' + relativeURL.replace(/^\/+/, '');
 	}
 
-	const malformedHttpProtocol = /^https?:(?!\/\/)/i;
-	const httpProtocolControlCharacters = /[\t\n\r]/g;
-	function stripLeadingC0ControlOrSpace(url) {
-	  let i = 0;
-	  while (i < url.length && url.charCodeAt(i) <= 0x20) {
-	    i++;
-	  }
-	  return url.slice(i);
-	}
+	const urlParserControlCharacters = /[\t\n\r]/g;
+
+	/**
+	 * Match WHATWG URL preprocessing before checking a URL's protocol.
+	 *
+	 * @param {string} url
+	 *
+	 * @returns {string}
+	 */
 	function normalizeURLForProtocolCheck(url) {
-	  return stripLeadingC0ControlOrSpace(url).replace(httpProtocolControlCharacters, '');
+	  if (typeof url !== 'string') {
+	    return url;
+	  }
+	  let start = 0;
+	  while (start < url.length && url.charCodeAt(start) <= 0x20) {
+	    start++;
+	  }
+	  return url.slice(start).replace(urlParserControlCharacters, '');
 	}
+
+	const malformedHttpProtocol = /^https?:(?!\/\/)/i;
 
 	// Redact the parts of a URL that can carry secrets before it is embedded in an
 	// error message. AxiosError.toJSON() serializes `message` verbatim and errors
@@ -156000,7 +157655,7 @@ function requireAxios () {
 	  return process.env[key.toLowerCase()] || process.env[key.toUpperCase()] || '';
 	}
 
-	const VERSION = "1.19.0";
+	const VERSION = "1.20.0";
 
 	function parseProtocol(url) {
 	  const match = /^([-+\w]{1,25}):(?:\/\/)?/.exec(url);
@@ -156009,7 +157664,7 @@ function requireAxios () {
 
 	// RFC 2397: data:[<mediatype>][;base64],<data>
 	// mediatype = type/subtype followed by optional ;name=value parameters
-	const DATA_URL_PATTERN = /^([^,;]+\/[^,;]+)?((?:;[^,;=]+=[^,;]+)*)(;base64)?,([\s\S]*)$/;
+	const DATA_URL_PATTERN = /^([^,;/]+\/[^,;/]+)?((?:;[^,;=]+=[^,;]+)*)(;base64)?,([\s\S]*)$/;
 
 	/**
 	 * Parse data uri to a Buffer or Blob
@@ -156322,7 +157977,7 @@ function requireAxios () {
 	    this.sessions = Object.create(null);
 	  }
 	  getSession(authority, options) {
-	    options = Object.assign({
+	    options = Object.assign(Object.create(null), {
 	      sessionTimeout: 1000
 	    }, options);
 	    let authoritySessions = this.sessions[authority];
@@ -156389,6 +158044,7 @@ function requireAxios () {
 	      };
 	    }
 	    session.once('close', removeSession);
+	    session.once('error', removeSession);
 	    let entry = [session, options];
 	    authoritySessions ? authoritySessions.push(entry) : authoritySessions = this.sessions[authority] = [entry];
 	    return session;
@@ -156409,6 +158065,13 @@ function requireAxios () {
 	};
 
 	const LOOPBACK_HOSTNAMES = new Set(['localhost', '0.0.0.0']);
+	const trimTrailingDots = value => {
+	  let end = value.length;
+	  while (end && value.charCodeAt(end - 1) === 46) {
+	    end--;
+	  }
+	  return end === value.length ? value : value.slice(0, end);
+	};
 	const isIPv4Loopback = host => {
 	  const parts = host.split('.');
 	  if (parts.length !== 4) return false;
@@ -156464,7 +158127,7 @@ function requireAxios () {
 	  if (h.charAt(0) === '[' && h.charAt(h.length - 1) === ']') {
 	    h = h.slice(1, -1);
 	  }
-	  h = h.replace(/\.+$/, '');
+	  h = trimTrailingDots(h);
 
 	  // Allowed characters for any IPv4 shape: digits, dot, 'x', 'X', hex digits.
 	  if (!/^[0-9.xXa-fA-F]+$/.test(h)) return host;
@@ -156619,6 +158282,40 @@ function requireAxios () {
 	  }
 	  return host;
 	};
+	const IPV4_OCTET_RE = /^(?:0|[1-9]\d{0,2})$/;
+	const ipv4ToBytes = host => {
+	  const parts = host.split('.');
+	  return parts.length === 4 && parts.every(part => IPV4_OCTET_RE.test(part) && Number(part) <= 255) ? parts.map(Number) : null;
+	};
+	const IPV6_GROUP_RE = /^[0-9a-f]{1,4}$/i;
+	const ipv6ToBytes = host => {
+	  const halves = host.split('::');
+	  if (halves.length > 2) {
+	    return null;
+	  }
+	  const groups = halves[0] ? halves[0].split(':') : [];
+	  if (halves.length === 2) {
+	    const rear = halves[1] ? halves[1].split(':') : [];
+	    const missing = 8 - groups.length - rear.length;
+	    if (missing < 1) {
+	      return null;
+	    }
+	    groups.push(...new Array(missing).fill('0'), ...rear);
+	  }
+	  if (groups.length !== 8 || groups.some(group => !IPV6_GROUP_RE.test(group))) {
+	    return null;
+	  }
+	  return groups.flatMap(group => {
+	    const value = Number.parseInt(group, 16);
+	    return [value >> 8 & 0xff, value & 0xff];
+	  });
+	};
+	const ipToBytes = host => {
+	  if (typeof host !== 'string' || !host) {
+	    return null;
+	  }
+	  return host.indexOf(':') !== -1 ? ipv6ToBytes(host) : ipv4ToBytes(host);
+	};
 	const normalizeNoProxyHost = hostname => {
 	  if (!hostname) {
 	    return hostname;
@@ -156626,7 +158323,7 @@ function requireAxios () {
 	  if (hostname.charAt(0) === '[' && hostname.charAt(hostname.length - 1) === ']') {
 	    hostname = hostname.slice(1, -1);
 	  }
-	  const trimmed = hostname.replace(/\.+$/, '');
+	  const trimmed = trimTrailingDots(hostname);
 
 	  // IPv4 shorthand/octal/hex → dotted-decimal; helper is a no-op for inputs
 	  // containing ':' (IPv6 and IPv4-mapped IPv6) so we fall through to unmap.
@@ -156635,6 +158332,92 @@ function requireAxios () {
 	    return ipv4;
 	  }
 	  return unmapIPv4MappedIPv6(trimmed);
+	};
+	const normalizeCidrBase = input => {
+	  let base = input;
+	  const startsBracket = base.charAt(0) === '[';
+	  const endsBracket = base.charAt(base.length - 1) === ']';
+	  const hasBracket = base.includes('[') || base.includes(']');
+	  if (startsBracket || endsBracket) {
+	    if (!startsBracket || !endsBracket) {
+	      return null;
+	    }
+	    base = base.slice(1, -1);
+	    if (base.indexOf(':') === -1 || base.includes('[') || base.includes(']')) {
+	      return null;
+	    }
+	  } else if (hasBracket) {
+	    return null;
+	  }
+	  if (!base || base.charAt(base.length - 1) === '.') {
+	    return null;
+	  }
+	  const wasIPv6 = base.indexOf(':') !== -1;
+	  if (wasIPv6) {
+	    try {
+	      base = new URL(`http://[${base}]/`).hostname.slice(1, -1);
+	    } catch (_err) {
+	      return null;
+	    }
+	  } else {
+	    base = normalizeIPAddress(base);
+	    if (!ipv4ToBytes(base)) {
+	      return null;
+	    }
+	  }
+	  return {
+	    normalized: unmapIPv4MappedIPv6(base),
+	    wasIPv6
+	  };
+	};
+	const CIDR_ENTRY_RE = /^(.+)\/(0|[1-9]\d{0,2})$/;
+	const parseCidrEntry = entry => {
+	  if (entry.indexOf('/') === -1) {
+	    return undefined;
+	  }
+	  const match = CIDR_ENTRY_RE.exec(entry);
+	  if (!match) {
+	    return null;
+	  }
+	  let prefix = Number(match[2]);
+	  const parsedBase = normalizeCidrBase(match[1]);
+	  if (!parsedBase) {
+	    return null;
+	  }
+	  const {
+	    normalized,
+	    wasIPv6
+	  } = parsedBase;
+	  if (wasIPv6 && normalized.indexOf(':') === -1) {
+	    if (prefix < 96) {
+	      return null;
+	    }
+	    prefix -= 96;
+	  }
+	  const bytes = ipToBytes(normalized);
+	  if (!bytes || prefix > bytes.length * 8) {
+	    return null;
+	  }
+	  return {
+	    bytes,
+	    prefix
+	  };
+	};
+	const isInSubnet = (addressBytes, networkBytes, prefix) => {
+	  const fullBytes = prefix >> 3;
+	  for (let i = 0; i < fullBytes; i++) {
+	    if (addressBytes[i] !== networkBytes[i]) {
+	      return false;
+	    }
+	  }
+	  const remainingBits = prefix & 7;
+	  if (remainingBits) {
+	    const mask = 0xff << 8 - remainingBits & 0xff;
+	    if ((addressBytes[fullBytes] & mask) !== (networkBytes[fullBytes] & mask)) {
+	      return false;
+	    }
+	  }
+	  return true;
 	};
 	function shouldBypassProxy(location) {
 	  let parsed;
@@ -156652,12 +158435,17 @@ function requireAxios () {
 	  }
 	  const port = Number.parseInt(parsed.port, 10) || DEFAULT_PORTS[parsed.protocol.split(':', 1)[0]] || 0;
 	  const hostname = normalizeNoProxyHost(parsed.hostname.toLowerCase());
+	  const hostnameBytes = ipToBytes(hostname);
 	  return noProxy.split(/[\s,]+/).some(entry => {
 	    if (!entry) {
 	      return false;
 	    }
 	    if (entry === '*') {
 	      return true;
+	    }
+	    const cidr = parseCidrEntry(entry);
+	    if (cidr !== undefined) {
+	      return cidr !== null && !!hostnameBytes && hostnameBytes.length === cidr.bytes.length && isInSubnet(hostnameBytes, cidr.bytes, cidr.prefix);
 	    }
 	    let [entryHost, entryPort] = parseNoProxyEntry(entry);
 	    entryHost = normalizeNoProxyHost(entryHost);
@@ -156721,7 +158509,7 @@ function requireAxios () {
 	 * Throttle decorator
 	 * @param {Function} fn
 	 * @param {Number} freq
-	 * @return {Function}
+	 * @return {Array<Function>}
 	 */
 	function throttle(fn, freq) {
 	  let timestamp = 0;
@@ -156753,14 +158541,15 @@ function requireAxios () {
 	    }
 	  };
 	  const flush = () => lastArgs && invoke(lastArgs);
-	  return [throttled, flush];
+	  const flushWith = (...args) => invoke(args);
+	  return [throttled, flush, flushWith];
 	}
 
 	const progressEventReducer = (listener, isDownloadStream, freq = 3) => {
 	  let bytesNotified = 0;
 	  const _speedometer = speedometer(50, 250);
 	  return throttle(e => {
-	    if (!e || typeof e.loaded !== 'number') {
+	    if (!e || !utils$1.isNumber(e.loaded)) {
 	      return;
 	    }
 	    const rawLoaded = e.loaded;
@@ -156960,6 +158749,15 @@ function requireAxios () {
 	const kAxiosSocketListener = Symbol('axios.http.socketListener');
 	const kAxiosCurrentReq = Symbol('axios.http.currentReq');
 
+	// A shared listener avoids retaining an adapter context for the lifetime of a
+	// pooled socket. EventEmitter invokes listeners with `this` set to the emitter.
+	function handleSocketError(err) {
+	  const current = this[kAxiosCurrentReq];
+	  if (current && !current.destroyed) {
+	    current.destroy(err);
+	  }
+	}
+
 	// Tags HttpsProxyAgent instances installed by setProxy() so the redirect path
 	// can strip them without clobbering a user-supplied agent that happens to be
 	// an HttpsProxyAgent.
@@ -157105,13 +158903,14 @@ function requireAxios () {
 	 * @param {http.ClientRequestArgs} options
 	 * @param {AxiosProxyConfig} configProxy configuration from Axios options object
 	 * @param {string} location
+	 * @param {boolean} [allowEnvProxy=true] whether environment proxy configuration can be used
 	 *
-	 * @returns {http.ClientRequestArgs}
+	 * @returns {boolean} whether a proxy applies to the selected transport
 	 */
-	function setProxy(options, configProxy, location, isRedirect, configHttpsAgent, configHttpAgent) {
+	function setProxy(options, configProxy, location, isRedirect, configHttpsAgent, configHttpAgent, allowEnvProxy = true) {
 	  let proxy = configProxy;
 	  const proxyEnvAgent = getProxyEnvAgent(options, configHttpAgent, configHttpsAgent);
-	  if (!proxy && proxy !== false && !isNodeEnvProxyEnabled(proxyEnvAgent)) {
+	  if (!proxy && proxy !== false && allowEnvProxy && !isNodeEnvProxyEnabled(proxyEnvAgent)) {
 	    const proxyUrl = getProxyForUrl(location);
 	    if (proxyUrl) {
 	      if (!shouldBypassProxy(location)) {
@@ -157246,8 +159045,9 @@ function requireAxios () {
 	  options.beforeRedirects.proxy = function beforeRedirect(redirectOptions) {
 	    // Configure proxy for redirected request, passing the original config proxy to apply
 	    // the exact same logic as if the redirected request was performed by axios directly.
-	    setProxy(redirectOptions, configProxy, redirectOptions.href, true, configHttpsAgent, configHttpAgent);
+	    setProxy(redirectOptions, configProxy, redirectOptions.href, true, configHttpsAgent, configHttpAgent, allowEnvProxy);
 	  };
+	  return Boolean(proxy || configProxy !== false && allowEnvProxy && isNodeEnvProxyEnabled(proxyEnvAgent));
 	}
 	const isHttpAdapterSupported = typeof process !== 'undefined' && utils$1.kindOf(process) === 'process';
 
@@ -157278,7 +159078,7 @@ function requireAxios () {
 	  family
 	}) => {
 	  if (!utils$1.isString(address)) {
-	    throw TypeError('address must be a string');
+	    throw new AxiosError('address must be a string', AxiosError.ERR_BAD_OPTION_VALUE);
 	  }
 	  return {
 	    address,
@@ -157289,6 +159089,32 @@ function requireAxios () {
 	  address,
 	  family
 	});
+	const normalizedLookupCache = new WeakMap();
+	const normalizeLookup = lookup => {
+	  let normalized = normalizedLookupCache.get(lookup);
+	  if (normalized) {
+	    return normalized;
+	  }
+	  const callbackLookup = callbackify(lookup, value => utils$1.isArray(value) ? value : [value]);
+
+	  // Support opt.all, which is required by current Node.js releases.
+	  normalized = (hostname, opt, cb) => {
+	    callbackLookup(hostname, opt, (err, arg0, arg1) => {
+	      if (err) {
+	        return cb(err);
+	      }
+	      let addresses;
+	      try {
+	        addresses = utils$1.isArray(arg0) ? arg0.map(addr => buildAddressEntry(addr)) : [buildAddressEntry(arg0, arg1)];
+	      } catch (error) {
+	        return cb(error);
+	      }
+	      opt.all ? cb(err, addresses) : cb(err, addresses[0].address, addresses[0].family);
+	    });
+	  };
+	  normalizedLookupCache.set(lookup, normalized);
+	  return normalized;
+	};
 	const http2Transport = {
 	  request(options, cb) {
 	    const authority = options.protocol + '//' + options.hostname + ':' + (options.port || (options.protocol === 'https:' ? 443 : 80));
@@ -157341,6 +159167,7 @@ function requireAxios () {
 	    let family = own('family');
 	    let httpVersion = own('httpVersion');
 	    if (httpVersion === undefined) httpVersion = 1;
+	    const rawHttpVersion = httpVersion;
 	    let http2Options = own('http2Options');
 	    const httpAgent = own('httpAgent');
 	    const httpsAgent = own('httpsAgent');
@@ -157357,26 +159184,20 @@ function requireAxios () {
 	    let rejected = false;
 	    let req;
 	    let connectPhaseTimer;
-	    httpVersion = +httpVersion;
+	    try {
+	      httpVersion = +httpVersion;
+	    } catch (err) {
+	      throw new AxiosError('Invalid protocol version: value is not a number', AxiosError.ERR_BAD_OPTION_VALUE, config);
+	    }
 	    if (Number.isNaN(httpVersion)) {
-	      throw TypeError(`Invalid protocol version: '${config.httpVersion}' is not a number`);
+	      throw new AxiosError(`Invalid protocol version: '${rawHttpVersion}' is not a number`, AxiosError.ERR_BAD_OPTION_VALUE, config);
 	    }
 	    if (httpVersion !== 1 && httpVersion !== 2) {
-	      throw TypeError(`Unsupported protocol version '${httpVersion}'`);
+	      throw new AxiosError(`Unsupported protocol version '${httpVersion}'`, AxiosError.ERR_BAD_OPTION_VALUE, config);
 	    }
 	    const isHttp2 = httpVersion === 2;
 	    if (lookup) {
-	      const _lookup = callbackify(lookup, value => utils$1.isArray(value) ? value : [value]);
-	      // hotfix to support opt.all option which is required for node 20.x
-	      lookup = (hostname, opt, cb) => {
-	        _lookup(hostname, opt, (err, arg0, arg1) => {
-	          if (err) {
-	            return cb(err);
-	          }
-	          const addresses = utils$1.isArray(arg0) ? arg0.map(addr => buildAddressEntry(addr)) : [buildAddressEntry(arg0, arg1)];
-	          opt.all ? cb(err, addresses) : cb(err, addresses[0].address, addresses[0].family);
-	        });
-	      };
+	      lookup = normalizeLookup(lookup);
 	    }
 	    const abortEmitter = new events.EventEmitter();
 	    function abort(reason) {
@@ -157589,6 +159410,11 @@ function requireAxios () {
 	      }));
 	    }
 	    headers.set('Accept-Encoding', utils$1.hasOwnProp(transitional, 'advertiseZstdAcceptEncoding') && transitional.advertiseZstdAcceptEncoding === true ? ACCEPT_ENCODING_WITH_ZSTD : ACCEPT_ENCODING, false);
+	    if (isHttp2 && lookup) {
+	      http2Options = Object.assign(Object.create(null), http2Options, {
+	        lookup
+	      });
+	    }
 
 	    // Null-prototype to block prototype pollution gadgets on properties read
 	    // directly by Node's http.request (e.g. insecureHTTPParser, lookup).
@@ -157605,11 +159431,13 @@ function requireAxios () {
 	      family,
 	      beforeRedirect: dispatchBeforeRedirect,
 	      beforeRedirects: Object.create(null),
-	      http2Options
+	      http2Options,
+	      createConnection: undefined
 	    });
 
 	    // cacheable-lookup integration hotfix
 	    !utils$1.isUndefined(lookup) && (options.lookup = lookup);
+	    let proxyApplied = false;
 	    if (socketPath) {
 	      if (typeof socketPath !== 'string') {
 	        return reject(new AxiosError('socketPath must be a string', AxiosError.ERR_BAD_OPTION_VALUE, config));
@@ -157627,7 +159455,11 @@ function requireAxios () {
 	    } else {
 	      options.hostname = parsed.hostname.startsWith('[') ? parsed.hostname.slice(1, -1) : parsed.hostname;
 	      options.port = parsed.port;
-	      setProxy(options, configProxy, protocol + '//' + parsed.hostname + (parsed.port ? ':' + parsed.port : '') + options.path, false, httpsAgent, httpAgent);
+	      proxyApplied = setProxy(options, configProxy, protocol + '//' + parsed.hostname + (parsed.port ? ':' + parsed.port : '') + options.path, false, httpsAgent, httpAgent,
+	      // The HTTP/2 transport connects independently of HTTP/1 agents, so it
+	      // cannot apply either axios-resolved or agent-local environment proxies.
+	      // Explicit proxy config is still processed and rejected below.
+	      !isHttp2);
 	    }
 	    let transport;
 	    let isNativeTransport = false;
@@ -157643,6 +159475,9 @@ function requireAxios () {
 	      options.agent = isHttpsRequest ? httpsAgent : httpAgent;
 	    }
 	    if (isHttp2) {
+	      if (proxyApplied) {
+	        return reject(new AxiosError('HTTP/2 requests with a proxy are not supported', AxiosError.ERR_NOT_SUPPORT, config));
+	      }
 	      transport = http2Transport;
 	    } else {
 	      const configTransport = own('transport');
@@ -157890,18 +159725,10 @@ function requireAxios () {
 	        socket.setKeepAlive(true, 1000 * 60);
 	      }
 
-	      // Install a single 'error' listener per socket (not per request) to avoid
-	      // accumulating listeners on pooled keep-alive sockets that get reassigned
-	      // to new requests before the previous request's 'close' fires (issue #10780).
-	      // The listener is bound to the socket's currently-active request via a
-	      // symbol, which is swapped as the socket is reassigned.
+	      // Install one shared 'error' listener per socket. The symbol follows the
+	      // currently-active request as pooled sockets are reassigned (issue #10780).
 	      if (!socket[kAxiosSocketListener]) {
-	        socket.on('error', function handleSocketError(err) {
-	          const current = socket[kAxiosCurrentReq];
-	          if (current && !current.destroyed) {
-	            current.destroy(err);
-	          }
-	        });
+	        socket.on('error', handleSocketError);
 	        socket[kAxiosSocketListener] = true;
 	      }
 	      socket[kAxiosCurrentReq] = req;
@@ -158163,7 +159990,7 @@ function requireAxios () {
 	    transformResponse: defaultToConfig2,
 	    paramsSerializer: defaultToConfig2,
 	    timeout: defaultToConfig2,
-	    timeoutMessage: defaultToConfig2,
+	    timeoutErrorMessage: defaultToConfig2,
 	    withCredentials: defaultToConfig2,
 	    withXSRFToken: defaultToConfig2,
 	    adapter: defaultToConfig2,
@@ -158245,11 +160072,12 @@ function requireAxios () {
 	    }
 	  }
 	  if (utils$1.isFormData(data)) {
+	    const getHeaders = utils$1.getSafeProp(data, 'getHeaders');
 	    if (platform.hasStandardBrowserEnv || platform.hasStandardBrowserWebWorkerEnv || utils$1.isReactNative(data)) {
 	      headers.setContentType(undefined); // browser/web worker/RN handles it
-	    } else if (utils$1.isFunction(data.getHeaders)) {
+	    } else if (utils$1.isFunction(getHeaders)) {
 	      // Node.js FormData (like form-data package)
-	      setFormDataHeaders(headers, data.getHeaders(), own('formDataHeaderPolicy'));
+	      setFormDataHeaders(headers, getHeaders.call(data), own('formDataHeaderPolicy'));
 	    }
 	  }
 
@@ -158289,7 +160117,7 @@ function requireAxios () {
 	    } = _config;
 	    let onCanceled;
 	    let uploadThrottled, downloadThrottled;
-	    let flushUpload, flushDownload;
+	    let flushUpload, flushDownload, flushDownloadWithEvent;
 	    function done() {
 	      flushUpload && flushUpload(); // flush events
 	      flushDownload && flushDownload(); // flush events
@@ -158302,10 +160130,50 @@ function requireAxios () {
 
 	    // Set the request timeout in MS
 	    request.timeout = _config.timeout;
-	    function onloadend() {
+	    function onloadend(event) {
 	      if (!request) {
 	        return;
 	      }
+
+	      // Status 0 means no response was received, which onerror and onabort normally
+	      // reject before this runs. Firefox 152 fires only readystatechange and loadend for
+	      // navigation-canceled requests (https://bugzilla.mozilla.org/show_bug.cgi?id=1505389),
+	      // leaving settle() to resolve them as an empty success. ECONNABORTED is the error
+	      // onabort raised on Firefox 151. Reads over file:, which some environments report as
+	      // status 0 on success, are excluded by the request URL's scheme after browser-style
+	      // preprocessing, by the page origin's scheme for relative URLs (which inherit it), or
+	      // by responseURL where implemented.
+	      if (request.status === 0 && (parseProtocol(normalizeURLForProtocolCheck(_config.url)) || parseProtocol(platform.origin)) !== 'file' && !(request.responseURL && request.responseURL.startsWith('file:'))) {
+	        reject(new AxiosError('Request aborted', AxiosError.ECONNABORTED, config, request));
+	        done();
+
+	        // Clean up request
+	        request = null;
+	        return;
+	      }
+
+	      // When loadend is still dispatching, flushing with it gives progress
+	      // listeners a final delivery whose event has a live target. The legacy
+	      // ready-state fallback has no event, so replay its pending progress.
+	      // A throwing listener must not block settlement; rethrow asynchronously,
+	      // matching how listener errors surface on the throttle timer path.
+	      try {
+	        if (event) {
+	          flushDownloadWithEvent && flushDownloadWithEvent(event);
+	        } else {
+	          flushDownload && flushDownload();
+	        }
+	      } catch (err) {
+	        setTimeout(() => {
+	          throw err;
+	        });
+	      }
+
+	      // A final progress callback can cancel the request synchronously.
+	      if (!request) {
+	        return;
+	      }
+
 	      // Prepare the response
 	      const responseHeaders = AxiosHeaders.from('getAllResponseHeaders' in request && request.getAllResponseHeaders());
 	      const responseData = !responseType || responseType === 'text' || responseType === 'json' ? request.responseText : request.response;
@@ -158413,7 +160281,7 @@ function requireAxios () {
 
 	    // Handle progress if needed
 	    if (onDownloadProgress) {
-	      [downloadThrottled, flushDownload] = progressEventReducer(onDownloadProgress, true);
+	      [downloadThrottled, flushDownload, flushDownloadWithEvent] = progressEventReducer(onDownloadProgress, true);
 	      request.addEventListener('progress', downloadThrottled);
 	    }
 
@@ -158584,6 +160452,17 @@ function requireAxios () {
 	};
 
 	const DEFAULT_CHUNK_SIZE = 64 * 1024;
+	const DEFAULT_REQUEST_OPTIONS = {
+	  cache: 'default',
+	  redirect: 'follow',
+	  referrer: 'about:client',
+	  referrerPolicy: '',
+	  mode: 'cors',
+	  integrity: '',
+	  keepalive: false,
+	  priority: 'auto',
+	  window: null
+	};
 	const {
 	  isFunction
 	} = utils$1;
@@ -158726,7 +160605,8 @@ function requireAxios () {
 	      withCredentials = 'same-origin',
 	      fetchOptions,
 	      maxContentLength,
-	      maxBodyLength
+	      maxBodyLength,
+	      maxRedirects
 	    } = resolveConfig(config);
 	    const hasMaxContentLength = utils$1.isNumber(maxContentLength) && maxContentLength > -1;
 	    const hasMaxBodyLength = utils$1.isNumber(maxBodyLength) && maxBodyLength > -1;
@@ -158857,17 +160737,46 @@ function requireAxios () {
 
 	      // Set User-Agent header if not already set (fetch defaults to 'node' in Node.js)
 	      headers.set('User-Agent', 'axios/' + VERSION, false);
-	      const resolvedOptions = {
-	        ...fetchOptions,
+	      const safeFetchOptions = fetchOptions == null ? fetchOptions : Object.assign(Object.create(null), fetchOptions);
+	      if (safeFetchOptions) {
+	        // These options are owned by Axios and are already reflected in the
+	        // resolved Request passed to fetch.
+	        delete safeFetchOptions.body;
+	        delete safeFetchOptions.headers;
+	        delete safeFetchOptions.method;
+	        delete safeFetchOptions.signal;
+	        delete safeFetchOptions.duplex;
+	        delete safeFetchOptions.credentials;
+	      }
+	      const resolvedOptions = Object.assign(Object.create(null), safeFetchOptions, {
 	        signal: composedSignal,
 	        method: method.toUpperCase(),
 	        headers: toByteStringHeaderObject(headers.normalize()),
 	        body: data,
 	        duplex: 'half',
 	        credentials: isCredentialsSupported ? withCredentials : undefined
-	      };
+	      });
+	      if (isRequestSupported) {
+	        utils$1.forEach(DEFAULT_REQUEST_OPTIONS, (value, key) => {
+	          if (resolvedOptions[key] === undefined) {
+	            resolvedOptions[key] = value;
+	          }
+	        });
+	        if (resolvedOptions.signal === undefined) {
+	          resolvedOptions.signal = null;
+	        }
+	        if (resolvedOptions.body === undefined) {
+	          resolvedOptions.body = null;
+	        }
+	      }
+	      if (maxRedirects === 0) {
+	        resolvedOptions.redirect = 'manual';
+	        if (safeFetchOptions) {
+	          safeFetchOptions.redirect = 'manual';
+	        }
+	      }
 	      request = isRequestSupported && new Request(url, resolvedOptions);
-	      let response = await (isRequestSupported ? _fetch(request, fetchOptions) : _fetch(url, resolvedOptions));
+	      let response = await (isRequestSupported ? _fetch(request, safeFetchOptions) : _fetch(url, resolvedOptions));
 	      const responseHeaders = AxiosHeaders.from(response.headers);
 
 	      // Cheap pre-check: if the server honestly declares a content-length that
@@ -159147,9 +161056,13 @@ function requireAxios () {
 	 *
 	 * @returns {Promise} The Promise to be fulfilled
 	 */
-	function dispatchRequest(config) {
+	function dispatchRequest(_config) {
+	  // Interceptors may replace the merged config with an ordinary object. Flatten
+	  // it at the dispatch boundary so shared prototype members cannot become
+	  // request behavior, while preserving intentional template/class members.
+	  const config = utils$1.toSafeFlatObject(_config);
 	  throwIfCancellationRequested(config);
-	  config.headers = AxiosHeaders.from(config.headers);
+	  config.headers = AxiosHeaders.from(utils$1.getSafeProp(config, 'headers'));
 
 	  // Transform request data
 	  config.data = transformData.call(config, config.transformRequest);
@@ -159305,18 +161218,17 @@ function requireAxios () {
 	      return await this._request(configOrUrl, config);
 	    } catch (err) {
 	      if (err instanceof Error) {
-	        let dummy = {};
-	        Error.captureStackTrace ? Error.captureStackTrace(dummy) : dummy = new Error();
-
-	        // slice off the Error: ... line
-	        const stack = (() => {
-	          if (!dummy.stack) {
-	            return '';
-	          }
-	          const firstNewlineIndex = dummy.stack.indexOf('\n');
-	          return firstNewlineIndex === -1 ? '' : dummy.stack.slice(firstNewlineIndex + 1);
-	        })();
 	        try {
+	          let dummy = {};
+	          Error.captureStackTrace ? Error.captureStackTrace(dummy) : dummy = new Error();
+	          const dummyStack = dummy.stack;
+	          let stack = '';
+
+	          // slice off the Error: ... line
+	          if (typeof dummyStack === 'string') {
+	            const firstNewlineIndex = dummyStack.indexOf('\n');
+	            stack = firstNewlineIndex === -1 ? '' : dummyStack.slice(firstNewlineIndex + 1);
+	          }
 	          if (!err.stack) {
 	            err.stack = stack;
 	            // match without the 2 top stack lines
@@ -159329,7 +161241,7 @@ function requireAxios () {
 	            }
 	          }
 	        } catch (e) {
-	          // ignore the case where "stack" is an un-writable property
+	          // Ignore failures from custom stack hooks or un-writable stack properties.
 	        }
 	      }
 	      throw err;
@@ -159385,11 +161297,11 @@ function requireAxios () {
 	    }, true);
 
 	    // Set config.method
-	    config.method = (config.method || this.defaults.method || 'get').toLowerCase();
+	    config.method = (utils$1.getSafeProp(config, 'method') || utils$1.getSafeProp(this.defaults, 'method') || 'get').toLowerCase();
 
 	    // Flatten headers
 	    let contextHeaders = headers && utils$1.merge(headers.common, headers[config.method]);
-	    headers && utils$1.forEach(['delete', 'get', 'head', 'post', 'put', 'patch', 'query', 'common'], method => {
+	    headers && utils$1.forEach(methodList.concat('common'), method => {
 	      delete headers[method];
 	    });
 	    config.headers = AxiosHeaders.concat(contextHeaders, headers);
@@ -159695,14 +161607,22 @@ function requireAxios () {
 	  Gone: 410,
 	  LengthRequired: 411,
 	  PreconditionFailed: 412,
+	  /**
+	   * @deprecated Use `ContentTooLarge` instead.
+	   */
 	  PayloadTooLarge: 413,
+	  ContentTooLarge: 413,
 	  UriTooLong: 414,
 	  UnsupportedMediaType: 415,
 	  RangeNotSatisfiable: 416,
 	  ExpectationFailed: 417,
 	  ImATeapot: 418,
 	  MisdirectedRequest: 421,
+	  /**
+	   * @deprecated Use `UnprocessableContent` instead.
+	   */
 	  UnprocessableEntity: 422,
+	  UnprocessableContent: 422,
 	  Locked: 423,
 	  FailedDependency: 424,
 	  TooEarly: 425,
@@ -159731,7 +161651,9 @@ function requireAxios () {
 	  InvalidSslCertificate: 526
 	};
 	Object.entries(HttpStatusCode).forEach(([key, value]) => {
-	  HttpStatusCode[value] = key;
+	  if (HttpStatusCode[value] === undefined) {
+	    HttpStatusCode[value] = key;
+	  }
 	});
 
 	/**
