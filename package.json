@@ -27,7 +27,7 @@
     "@actions/glob": "^0.7.0",
     "@actions/io": "^3.0.2",
     "@actions/warpbuild-cache": "npm:github-actions.warp-cache@1.4.7",
-    "axios": "^1.20.0",
+    "axios": "^1.21.1",
     "smol-toml": "^1.9.1"
   },
   "devDependencies": {
