@@ -50,3 +50,31 @@ reason = "undici: transitive dependency via @actions/github or @actions/http-cli
 [[IgnoredVulns]]
 id = "GHSA-w5hq-g745-h8pq"
 reason = "uuid: transitive dependency via @actions/warpbuild-cache, @azure/ms-rest-js, and teeny-request; not directly used"
+
+[[IgnoredVulns]]
+id = "GHSA-gxm5-99cw-xjw9"
+reason = "@fastify/busboy: transitive via warpbuild-cache undici 5; only used for multipart formData() parsing, which the action never calls"
+
+[[IgnoredVulns]]
+id = "GHSA-x8mw-p69m-v3mx"
+reason = "@fastify/busboy: transitive via warpbuild-cache undici 5; only used for multipart formData() parsing, which the action never calls"
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+reason = "minimatch: transitive via @actions/glob (latest still pins ^10); patterns are fixed or come from workflow author, not untrusted input"
+
+[[IgnoredVulns]]
+id = "GHSA-2m5v-pch6-74hx"
+reason = "undici: transitive via warpbuild-cache; action sets no custom TLS options on Agent"
+
+[[IgnoredVulns]]
+id = "GHSA-9fm3-97px-rjf6"
+reason = "undici: transitive via warpbuild-cache; action does not use WebSockets"
+
+[[IgnoredVulns]]
+id = "GHSA-qrxm-fqhp-jwvm"
+reason = "undici: transitive via warpbuild-cache; only connects to trusted GitHub/WarpBuild APIs"
+
+[[IgnoredVulns]]
+id = "GHSA-r53p-7pc4-xj5r"
+reason = "undici: transitive via warpbuild-cache; retry interceptor is not used"

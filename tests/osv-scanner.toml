@@ -103,3 +103,35 @@ reason = "It is a a test dependency"
 [[IgnoredVulns]]
 id = "GHSA-82j2-j2ch-gfr8"
 reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0441"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0486"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0346"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0348"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0349"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0382"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0386"
+reason = "It is a a test dependency"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0592"
+reason = "It is a a test dependency"
